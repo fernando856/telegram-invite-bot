@@ -21,8 +21,35 @@ class CompetitionHandlers:
         self.db = db_manager
         self.comp_manager = competition_manager
     
+    async def _check_private_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+        """Verifica se o comando está sendo usado em chat privado"""
+        if update.effective_chat.type != 'private':
+            # Obter informações do bot
+            try:
+                bot_info = await context.bot.get_me()
+                bot_username = bot_info.username
+                
+                await update.message.reply_text(
+                    f"🤖 **Comandos funcionam apenas no privado!**\n\n"
+                    f"👆 Clique aqui: @{bot_username}\n"
+                    f"📱 Ou procure por: {bot_username}\n\n"
+                    f"Depois use o comando novamente no chat privado! 🚀",
+                    parse_mode='Markdown'
+                )
+            except Exception:
+                await update.message.reply_text(
+                    "🤖 **Este comando funciona apenas no chat privado do bot!**\n\n"
+                    "Procure pelo bot e use o comando lá! 🚀"
+                )
+            return False
+        return True
+    
     async def competition_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /competicao - Mostra status da competição atual"""
+        # Verificar se está em chat privado
+        if not await self._check_private_chat(update, context):
+            return
+            
         try:
             active_comp = self.comp_manager.get_active_competition()
             
@@ -91,6 +118,10 @@ class CompetitionHandlers:
     
     async def user_performance(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /meudesempenho - Mostra performance do usuário"""
+        # Verificar se está em chat privado
+        if not await self._check_private_chat(update, context):
+            return
+            
         try:
             active_comp = self.comp_manager.get_active_competition()
             
@@ -145,6 +176,10 @@ Use /meulink para gerar novos links de convite.
     
     async def competition_ranking(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /ranking - Mostra ranking da competição"""
+        # Verificar se está em chat privado
+        if not await self._check_private_chat(update, context):
+            return
+            
         try:
             active_comp = self.comp_manager.get_active_competition()
             
@@ -211,6 +246,10 @@ Use /meulink para gerar novos links de convite.
     # Comandos administrativos
     async def start_create_competition(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /iniciar_competicao - Inicia processo de criação"""
+        # Verificar se está em chat privado
+        if not await self._check_private_chat(update, context):
+            return ConversationHandler.END
+            
         user_id = update.effective_user.id
         
         if user_id not in settings.admin_ids_list:
@@ -368,22 +407,26 @@ Use /meulink para gerar novos links de convite.
 🚀 **COMO PARTICIPAR:**
 
 1️⃣ Clique aqui: @{bot_username}
-2️⃣ Digite /start para começar
-3️⃣ Use /meulink para gerar seu link único
+2️⃣ Digite `/start` para começar
+3️⃣ Use `/meulink` para gerar seu link único
 4️⃣ Compartilhe com amigos e ganhe pontos!
 
 📊 **COMANDOS ÚTEIS:**
-• /meulink - Gerar seu link de convite
-• /ranking - Ver TOP 10 participantes
-• /competicao - Status da competição atual
+• `/meulink` - Gerar seu link de convite
+• `/ranking` - Ver TOP 10 participantes
+• `/competicao` - Status da competição atual
+• `/meudesempenho` - Suas estatísticas
 
 🏅 **PREMIAÇÃO:** TOP 10 participantes
+💰 **Sistema:** 1 convite = 1 ponto
+🔗 **Links únicos:** Cada participante tem seu próprio link
 
-Boa sorte a todos! 🍀"""
+**Boa sorte a todos!** 🍀"""
 
                 await context.bot.send_message(
                     chat_id=settings.CHAT_ID,
-                    text=channel_message
+                    text=channel_message,
+                    parse_mode='Markdown'
                 )
                 
             except Exception as e:
@@ -410,6 +453,10 @@ Boa sorte a todos! 🍀"""
     
     async def finish_competition_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /finalizar_competicao - Finaliza competição atual"""
+        # Verificar se está em chat privado
+        if not await self._check_private_chat(update, context):
+            return
+            
         user_id = update.effective_user.id
         
         if user_id not in settings.admin_ids_list:
@@ -439,41 +486,62 @@ Boa sorte a todos! 🍀"""
                     
                     # Calcular estatísticas
                     total_participants = len(ranking) if ranking else 0
-                    total_invites = sum(user.get('invites', 0) for user in ranking) if ranking else 0
+                    total_invites = sum(user.get('invites_count', 0) for user in ranking) if ranking else 0
+                    
+                    # Determinar se a meta foi atingida
+                    meta_atingida = "✅ Meta atingida!" if total_invites >= active_comp.target_invites else "❌ Meta não atingida"
                     
                     # Montar mensagem de ranking
                     ranking_text = ""
                     if ranking:
-                        for i, user in enumerate(ranking[:10], 1):
-                            medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}º"
-                            name = user.get('first_name', 'Usuário') or 'Usuário'
-                            invites = user.get('invites', 0)
-                            ranking_text += f"{medal} {name}: {invites} convites\n"
+                        medals = ["🥇", "🥈", "🥉"] + ["🏅"] * 7
+                        for i, user in enumerate(ranking[:10]):
+                            medal = medals[i]
+                            name = user.get('first_name', 'Usuário') or user.get('username', 'Usuário') or 'Usuário'
+                            invites = user.get('invites_count', 0)
+                            ranking_text += f"{medal} **{name}**: {invites:,} pontos\n"
                     else:
                         ranking_text = "Nenhum participante registrado."
+                    
+                    # Calcular duração real da competição
+                    try:
+                        if isinstance(active_comp.start_date, str):
+                            start_date = datetime.fromisoformat(active_comp.start_date.replace('Z', '+00:00'))
+                        else:
+                            start_date = active_comp.start_date
+                        
+                        duracao_real = (datetime.now() - start_date).days
+                    except:
+                        duracao_real = "N/A"
                     
                     channel_message = f"""🏁 **COMPETIÇÃO FINALIZADA!** 🏁
 
 🏆 **{active_comp.name}**
-📝 {active_comp.description or 'Competição encerrada!'}
+📝 {active_comp.description or 'Competição encerrada com sucesso!'}
 
 📊 **ESTATÍSTICAS FINAIS:**
-👥 Participantes: {total_participants}
-🎯 Total de convites: {total_invites:,}
-🏅 Meta: {active_comp.target_invites:,} convites
+👥 **Participantes:** {total_participants:,}
+🎯 **Total de convites:** {total_invites:,}
+🏅 **Meta estabelecida:** {active_comp.target_invites:,} convites
+📈 **Resultado:** {meta_atingida}
+⏰ **Duração:** {duracao_real} dias
 
 🏆 **RANKING FINAL - TOP 10:**
 
 {ranking_text}
 
-🎉 **Parabéns a todos os participantes!**
+🎉 **PARABÉNS A TODOS OS PARTICIPANTES!**
 
-Obrigado por participarem desta competição incrível! 
-Fiquem atentos para as próximas competições! 🚀"""
+Obrigado por tornarem esta competição um sucesso! 
+Cada convite fez a diferença para o crescimento da nossa comunidade.
+
+🔔 **Fiquem atentos para as próximas competições!**
+Novos desafios e prêmios estão chegando! 🚀"""
 
                     await context.bot.send_message(
                         chat_id=settings.CHAT_ID,
-                        text=channel_message
+                        text=channel_message,
+                        parse_mode='Markdown'
                     )
                     
                 except Exception as e:
@@ -488,6 +556,10 @@ Fiquem atentos para as próximas competições! 🚀"""
     
     async def admin_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /status_admin - Status administrativo simplificado"""
+        # Verificar se está em chat privado
+        if not await self._check_private_chat(update, context):
+            return
+            
         user_id = update.effective_user.id
         
         if user_id not in settings.admin_ids_list:

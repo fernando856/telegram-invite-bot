@@ -20,8 +20,35 @@ class InviteHandlers:
         self.invite_manager = invite_manager
         self.comp_manager = competition_manager
     
+    async def _check_private_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+        """Verifica se o comando está sendo usado em chat privado"""
+        if update.effective_chat.type != 'private':
+            # Obter informações do bot
+            try:
+                bot_info = await context.bot.get_me()
+                bot_username = bot_info.username
+                
+                await update.message.reply_text(
+                    f"🤖 **Comandos funcionam apenas no privado!**\n\n"
+                    f"👆 Clique aqui: @{bot_username}\n"
+                    f"📱 Ou procure por: {bot_username}\n\n"
+                    f"Depois use o comando novamente no chat privado! 🚀",
+                    parse_mode='Markdown'
+                )
+            except Exception:
+                await update.message.reply_text(
+                    "🤖 **Este comando funciona apenas no chat privado do bot!**\n\n"
+                    "Procure pelo bot e use o comando lá! 🚀"
+                )
+            return False
+        return True
+    
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /start - Boas-vindas com informações da competição"""
+        # Verificar se está em chat privado
+        if not await self._check_private_chat(update, context):
+            return
+            
         try:
             user = update.effective_user
             
@@ -107,6 +134,10 @@ Aguarde o próximo desafio! 🚀
     
     async def generate_invite_link(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /meulink - Gera link de convite único"""
+        # Verificar se está em chat privado
+        if not await self._check_private_chat(update, context):
+            return
+            
         try:
             user = update.effective_user
             
@@ -265,6 +296,10 @@ Boa sorte na competição! 🍀"""
     
     async def my_invites(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /meusconvites - Mostra estatísticas de convites"""
+        # Verificar se está em chat privado
+        if not await self._check_private_chat(update, context):
+            return
+            
         try:
             user = update.effective_user
             
@@ -351,6 +386,10 @@ Boa sorte na competição! 🍀"""
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /help - Ajuda completa"""
+        # Verificar se está em chat privado
+        if not await self._check_private_chat(update, context):
+            return
+            
         try:
             active_comp = self.comp_manager.get_active_competition()
             
