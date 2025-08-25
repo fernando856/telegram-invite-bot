@@ -10,7 +10,7 @@ flask==3.0.0
 flask-cors==4.0.0
 
 # Database
-sqlite3
+# sqlite3 is built-in with Python
 
 # Configuration Management
 pydantic==2.5.0
