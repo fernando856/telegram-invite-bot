@@ -10,6 +10,7 @@ from src.config.settings import settings
 from src.database.models import DatabaseManager
 from src.bot.services.competition_manager import CompetitionManager
 from src.bot.services.auto_registration import AutoRegistrationService
+from src.bot.services.competition_reset_manager import CompetitionResetManager
 from src.bot.utils.datetime_helper import calculate_time_remaining, format_time_remaining
 import logging
 
@@ -23,6 +24,7 @@ class CompetitionHandlers:
         self.db = db_manager
         self.comp_manager = competition_manager
         self.auto_registration = AutoRegistrationService(db_manager)
+        self.reset_manager = CompetitionResetManager(db_manager)
     
     async def _check_private_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Verifica se o comando está sendo usado em chat privado"""
@@ -387,8 +389,13 @@ Use /meulink para gerar novos links de convite.
                 admin_user_id=update.effective_user.id
             )
             
-            # Iniciar competição automaticamente
-            self.comp_manager.start_competition(competition.id)
+            # Iniciar competição automaticamente com reset
+            reset_stats = self.reset_manager.start_new_competition(competition.id)
+            
+            if reset_stats.get('status') != 'success':
+                logger.error(f"Erro no reset da competição: {reset_stats}")
+                await update.message.reply_text("⚠️ Competição criada mas houve problemas no reset. Verifique os logs.")
+                return ConversationHandler.END
             
             # Calcular data de fim com tratamento robusto
             duration_days = context.user_data['competition_duration']

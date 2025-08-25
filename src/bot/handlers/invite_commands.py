@@ -11,6 +11,7 @@ from src.database.models import DatabaseManager
 from src.bot.services.competition_manager import CompetitionManager
 from src.bot.services.invite_manager import InviteManager
 from src.bot.services.auto_registration import AutoRegistrationService
+from src.bot.services.link_reuse_manager import LinkReuseManager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ class InviteHandlers:
         self.invite_manager = invite_manager
         self.comp_manager = competition_manager
         self.auto_registration = AutoRegistrationService(db_manager)
+        self.link_reuse = LinkReuseManager(db_manager)
     
     async def _check_private_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Verifica se o comando está sendo usado em chat privado"""
@@ -164,22 +166,23 @@ Aguarde o próximo desafio! 🚀
             # Garantir que usuário está registrado na competição ativa
             self.auto_registration.ensure_user_in_active_competition(user.id)
             
-            # Verificar se usuário já tem link para esta competição
-            existing_link = self.db.get_user_invite_link(user.id, active_comp.id)
+            # Verificar se usuário já tem link reutilizável
+            existing_link_data = self.link_reuse.get_or_create_user_link(user.id, active_comp.id)
             
-            if existing_link:
-                # Usuário já tem link, mostrar o existente
-                invite_link = existing_link
-                link_status = "SEU LINK DE CONVITE!"
+            if existing_link_data:
+                # Reutilizar link existente
+                invite_link = InviteLink(**existing_link_data) if hasattr(InviteLink, '__init__') else existing_link_data
+                link_status = "SEU LINK DE CONVITE REUTILIZADO!"
+                logger.info(f"Reutilizando link existente para usuário {user.id}")
             else:
-                # Criar novo link
-                link_name = f"Link de {user.first_name or user.username or 'Usuário'} - {active_comp.name}"
+                # Criar novo link (primeira vez do usuário)
+                link_name = f"Link de {user.first_name or user.username or 'Usuário'}"
                 
                 invite_link = await self.invite_manager.create_invite_link(
                     user_id=user.id,
                     name=link_name,
-                    max_uses=settings.MAX_INVITE_USES,
-                    expire_days=settings.LINK_EXPIRY_DAYS,
+                    max_uses=99999,  # Limite alto para reutilização
+                    expire_days=365,  # Link de longa duração
                     competition_id=active_comp.id
                 )
                 
@@ -187,7 +190,8 @@ Aguarde o próximo desafio! 🚀
                     await update.message.reply_text("❌ Erro ao gerar link de convite. Tente novamente.")
                     return
                 
-                link_status = "SEU LINK DE CONVITE GERADO!"
+                link_status = "SEU PRIMEIRO LINK DE CONVITE GERADO!"
+                logger.info(f"Criado novo link para usuário {user.id}")
             
             # Verificar se invite_link é válido
             if not invite_link or not hasattr(invite_link, 'invite_link'):

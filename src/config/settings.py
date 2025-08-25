@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     CHAT_ID: int
     
     # Invite Settings
-    MAX_INVITE_USES: int = 10000
+    MAX_INVITE_USES: int = 99999
     LINK_EXPIRY_DAYS: int = 30
     
     # Competition Settings
