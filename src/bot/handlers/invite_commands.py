@@ -128,20 +128,27 @@ Aguarde o próximo desafio! 🚀
                 last_name=user.last_name
             )
             
-            # Gerar link de convite
-            link_name = f"Link de {user.first_name or user.username or 'Usuário'} - {active_comp.name}"
+            # Verificar se usuário já tem link para esta competição
+            existing_link = self.db.get_user_invite_link(user.id, active_comp.id)
             
-            invite_link = await self.invite_manager.create_invite_link(
-                user_id=user.id,
-                name=link_name,
-                max_uses=settings.MAX_INVITE_USES,
-                expire_days=settings.LINK_EXPIRY_DAYS,
-                competition_id=active_comp.id
-            )
-            
-            if not invite_link:
-                await update.message.reply_text("❌ Erro ao gerar link de convite. Tente novamente.")
-                return
+            if existing_link:
+                # Usuário já tem link, mostrar o existente
+                invite_link = existing_link
+            else:
+                # Criar novo link
+                link_name = f"Link de {user.first_name or user.username or 'Usuário'} - {active_comp.name}"
+                
+                invite_link = await self.invite_manager.create_invite_link(
+                    user_id=user.id,
+                    name=link_name,
+                    max_uses=settings.MAX_INVITE_USES,
+                    expire_days=settings.LINK_EXPIRY_DAYS,
+                    competition_id=active_comp.id
+                )
+                
+                if not invite_link:
+                    await update.message.reply_text("❌ Erro ao gerar link de convite. Tente novamente.")
+                    return
             
             # Adicionar usuário à competição
             self.comp_manager.add_participant(active_comp.id, user.id)
@@ -166,7 +173,10 @@ Aguarde o próximo desafio! 🚀
             except Exception:
                 time_str = "Calculando..."
                 
-            message = f"""🔗 SEU LINK DE CONVITE GERADO!
+            # Preparar mensagem com indicação se é link novo ou existente
+            link_status = "SEU LINK DE CONVITE!" if existing_link else "SEU LINK DE CONVITE GERADO!"
+            
+            message = f"""🔗 {link_status}
 
 🏆 Competição: {active_comp.name}
 ⏰ Tempo restante: {time_str}
