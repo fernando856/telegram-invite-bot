@@ -12,6 +12,7 @@ from src.config.settings import settings
 from src.database.models import DatabaseManager
 from src.bot.services.competition_manager import CompetitionManager
 from src.bot.services.invite_manager import InviteManager
+from src.bot.services.ranking_notifier import RankingNotifier
 from src.bot.handlers.competition_commands import get_competition_handlers
 from src.bot.handlers.invite_commands import get_invite_handlers
 
@@ -24,6 +25,7 @@ class BotManager:
         self.db_manager = None
         self.competition_manager = None
         self.invite_manager = None
+        self.ranking_notifier = None
         self.is_running = False
         
     async def initialize(self):
@@ -59,6 +61,7 @@ class BotManager:
             # Inicializar gerenciadores
             self.competition_manager = CompetitionManager(self.db_manager, self.bot)
             self.invite_manager = InviteManager(self.db_manager, self.bot)
+            self.ranking_notifier = RankingNotifier(self.db_manager, self.bot)
             logger.info("✅ Gerenciadores inicializados")
             
             # Criar aplicação
@@ -131,6 +134,21 @@ class BotManager:
                         # Registrar na competição se ativa
                         self.competition_manager.record_invite(link_stats['user_id'], invite_link)
                         
+                        # Verificar se há competição ativa para notificações de ranking
+                        active_competition = self.competition_manager.get_active_competition()
+                        if active_competition and self.ranking_notifier:
+                            try:
+                                # Verificar mudanças no ranking após o novo convite
+                                await self.ranking_notifier.check_and_notify_ranking_changes(active_competition.id)
+                                
+                                # Verificar marcos da competição
+                                ranking = self.db_manager.get_competition_ranking(active_competition.id, limit=100)
+                                total_invites = sum(user.get('invites_count', 0) for user in ranking) if ranking else 0
+                                await self.ranking_notifier.notify_competition_milestone(active_competition.id, total_invites)
+                                
+                            except Exception as e:
+                                logger.error(f"Erro ao processar notificações de ranking: {e}")
+                        
                         logger.info(f"Novo membro via convite: {new_member.first_name} (ID: {new_member.id}) via link de usuário {link_stats['user_id']}")
                 
         except Exception as e:
@@ -157,6 +175,9 @@ class BotManager:
             
             # Tarefa para limpeza de links expirados
             asyncio.create_task(self._cleanup_task())
+            
+            # Tarefa para notificações de ranking
+            asyncio.create_task(self._ranking_notifications_task())
             
             # Tarefa de heartbeat
             asyncio.create_task(self._heartbeat_task())
@@ -195,6 +216,35 @@ class BotManager:
             except Exception as e:
                 logger.error(f"Erro na tarefa de limpeza: {e}")
                 await asyncio.sleep(1800)  # Esperar 30 minutos em caso de erro
+    
+    async def _ranking_notifications_task(self):
+        """Tarefa para notificações de ranking e eventos especiais"""
+        while True:
+            try:
+                await asyncio.sleep(1800)  # Verificar a cada 30 minutos
+                
+                if self.ranking_notifier and self.competition_manager:
+                    # Verificar se há competição ativa
+                    active_competition = self.competition_manager.get_active_competition()
+                    
+                    if active_competition:
+                        # Verificar eventos especiais da competição
+                        await self.ranking_notifier.check_competition_events(active_competition.id)
+                        
+                        # Enviar resumo diário (apenas uma vez por dia às 20h)
+                        from datetime import datetime
+                        now = datetime.now()
+                        if now.hour == 20 and now.minute < 30:  # Entre 20:00 e 20:30
+                            await self.ranking_notifier.notify_daily_summary(active_competition.id)
+                        
+                        # Enviar mensagem motivacional ocasionalmente (10% de chance)
+                        import random
+                        if random.random() < 0.1:  # 10% de chance a cada verificação
+                            await self.ranking_notifier.send_motivation_message(active_competition.id)
+                
+            except Exception as e:
+                logger.error(f"Erro na tarefa de notificações de ranking: {e}")
+                await asyncio.sleep(3600)  # Esperar 1 hora em caso de erro
     
     async def _heartbeat_task(self):
         """Tarefa de heartbeat para manter bot ativo"""
