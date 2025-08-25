@@ -180,12 +180,12 @@ class DatabaseManager:
                           competition_id: int = None) -> InviteLink:
         """Cria um novo link de convite"""
         with self.get_connection() as conn:
-            conn.execute("""
+            cursor = conn.execute("""
                 INSERT INTO invite_links (user_id, invite_link, name, max_uses, expire_date, competition_id)
                 VALUES (?, ?, ?, ?, ?, ?)
             """, (user_id, invite_link, name, max_uses, expire_date, competition_id))
             
-            link_id = conn.lastrowid
+            link_id = cursor.lastrowid
             row = conn.execute("SELECT * FROM invite_links WHERE id = ?", (link_id,)).fetchone()
             return InviteLink(**dict(row))
     
@@ -220,12 +220,12 @@ class DatabaseManager:
         end_date = start_date + timedelta(days=duration_days)
         
         with self.get_connection() as conn:
-            conn.execute("""
+            cursor = conn.execute("""
                 INSERT INTO competitions (name, description, start_date, end_date, target_invites, status)
                 VALUES (?, ?, ?, ?, ?, 'preparation')
             """, (name, description, start_date, end_date, target_invites))
             
-            comp_id = conn.lastrowid
+            comp_id = cursor.lastrowid
             row = conn.execute("SELECT * FROM competitions WHERE id = ?", (comp_id,)).fetchone()
             return Competition(**dict(row))
     
