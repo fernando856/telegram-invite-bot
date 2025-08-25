@@ -83,7 +83,7 @@ class LinkReuseManager:
                     return False
             
             # Verificar se não atingiu limite de usos
-            if link_data.get('max_uses') and link_data.get('current_uses', 0) >= link_data['max_uses']:
+            if link_data.get('max_uses') and link_data.get('uses', 0) >= link_data['max_uses']:
                 return False
             
             # Link válido
@@ -107,7 +107,7 @@ class LinkReuseManager:
                 conn.execute("""
                     UPDATE invite_links 
                     SET competition_id = ?, 
-                        current_uses = 0,
+                        uses = 0,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 """, (competition_id, link_id))
@@ -133,7 +133,7 @@ class LinkReuseManager:
                 # Atualizar contagem de usos
                 cursor = conn.execute("""
                     UPDATE invite_links 
-                    SET current_uses = current_uses + ?,
+                    SET uses = uses + ?,
                         last_used_at = CURRENT_TIMESTAMP,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE invite_link = ?
@@ -168,7 +168,7 @@ class LinkReuseManager:
                     row = conn.execute("""
                         SELECT 
                             COUNT(*) as total_links,
-                            SUM(current_uses) as total_invites,
+                            SUM(uses) as total_invites,
                             MAX(created_at) as latest_link
                         FROM invite_links 
                         WHERE user_id = ? AND competition_id = ?
@@ -178,7 +178,7 @@ class LinkReuseManager:
                     row = conn.execute("""
                         SELECT 
                             COUNT(*) as total_links,
-                            SUM(current_uses) as total_invites,
+                            SUM(uses) as total_invites,
                             MAX(created_at) as latest_link
                         FROM invite_links 
                         WHERE user_id = ?
