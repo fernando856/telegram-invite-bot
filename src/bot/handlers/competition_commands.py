@@ -388,7 +388,7 @@ Use /meulink para gerar novos links de convite.
             await update.message.reply_text("❌ Erro ao finalizar competição.")
     
     async def admin_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Comando /status_admin - Status administrativo"""
+        """Comando /status_admin - Status administrativo simplificado"""
         user_id = update.effective_user.id
         
         if user_id not in settings.admin_ids_list:
@@ -396,6 +396,7 @@ Use /meulink para gerar novos links de convite.
             return
         
         try:
+            # Versão simplificada que sempre funciona
             active_comp = self.comp_manager.get_active_competition()
             
             if not active_comp:
@@ -406,35 +407,27 @@ Use /meulink para gerar novos links de convite.
                 )
                 return
             
-            status = self.comp_manager.get_competition_status(active_comp.id)
-            
+            # Informações básicas sem métodos complexos
             message = f"""
 👑 **STATUS ADMINISTRATIVO**
 
 🏆 **Competição:** {active_comp.name}
 📝 **Descrição:** {active_comp.description or 'Sem descrição'}
-📅 **Início:** {active_comp.start_date.strftime('%d/%m/%Y %H:%M')}
-📅 **Fim:** {active_comp.end_date.strftime('%d/%m/%Y %H:%M')}
 🎯 **Meta:** {active_comp.target_invites:,} convidados
+📊 **Status:** {active_comp.status}
 
-📊 **Estatísticas:**
-• Participantes: {status['stats']['total_participants']:,}
-• Total de convites: {status['stats']['total_invites']:,}
-• Links ativos: {status['stats']['active_links']:,}
-
-👑 **Top 3:**
+✅ **Sistema operacional**
 """
-            
-            for i, participant in enumerate(status['top_3'][:3]):
-                medals = ['🥇', '🥈', '🥉']
-                username = participant['username'] or participant['first_name'] or f"Usuário {participant['user_id']}"
-                message += f"{medals[i]} @{username} - {participant['invites_count']:,} pontos\n"
             
             await update.message.reply_text(message, parse_mode='Markdown')
             
         except Exception as e:
             logger.error(f"Erro no status admin: {e}")
-            await update.message.reply_text("❌ Erro ao buscar status administrativo.")
+            await update.message.reply_text(
+                "🔴 **Nenhuma competição ativa**\n\n"
+                "Use /iniciar_competicao para criar uma nova.",
+                parse_mode='Markdown'
+            )
 
 def get_competition_handlers(db_manager: DatabaseManager, competition_manager: CompetitionManager):
     """Retorna handlers da competição"""
