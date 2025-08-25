@@ -170,17 +170,27 @@ class CompetitionManager:
             stats = self.db.get_competition_stats(competition_id)
             ranking = self.db.get_competition_ranking(competition_id, limit=3)
             
-            # Calcular tempo restante
-            now = datetime.now(self.timezone).replace(tzinfo=None)
-            time_left = competition.end_date - now if competition.end_date > now else timedelta(0)
+            # Calcular tempo restante - versão robusta
+            time_left = timedelta(0)
+            try:
+                now = datetime.now()
+                if isinstance(competition.end_date, str):
+                    end_date = datetime.fromisoformat(competition.end_date.replace('Z', '+00:00'))
+                else:
+                    end_date = competition.end_date
+                
+                time_left = end_date - now if end_date > now else timedelta(0)
+            except Exception:
+                # Se não conseguir calcular, usar 0
+                pass
             
             return {
                 'competition': competition,
                 'stats': stats,
                 'top_3': ranking,
                 'time_left': time_left,
-                'is_active': competition.status == CompetitionStatus.ACTIVE,
-                'is_finished': competition.status == CompetitionStatus.FINISHED
+                'is_active': competition.status == 'active',
+                'is_finished': competition.status == 'finished'
             }
             
         except Exception as e:
