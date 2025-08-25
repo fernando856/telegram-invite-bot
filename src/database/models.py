@@ -341,20 +341,23 @@ class DatabaseManager:
                 """, (user_id,)).fetchone()
             
             if row:
+                # Converter Row para dict para acesso seguro
+                row_dict = dict(row)
+                
                 # Acesso seguro às colunas com valores padrão
                 return InviteLink(
-                    id=row.get('id', 0),
-                    user_id=row.get('user_id', user_id),
-                    invite_link=row.get('invite_link', ''),
-                    name=row.get('name', ''),
-                    max_uses=row.get('max_uses', 10000),
-                    current_uses=row.get('current_uses', 0),  # Valor padrão se não existir
-                    expire_date=row.get('expire_date', None),
-                    is_active=row.get('is_active', True),
-                    points_awarded=row.get('points_awarded', 1),
-                    competition_id=row.get('competition_id', competition_id),
-                    created_at=row.get('created_at', ''),
-                    updated_at=row.get('updated_at', '')
+                    id=row_dict.get('id', 0),
+                    user_id=row_dict.get('user_id', user_id),
+                    invite_link=row_dict.get('invite_link', ''),
+                    name=row_dict.get('name', ''),
+                    max_uses=row_dict.get('max_uses', 10000),
+                    current_uses=row_dict.get('current_uses', 0),  # Valor padrão se não existir
+                    expire_date=row_dict.get('expire_date', None),
+                    is_active=row_dict.get('is_active', True),
+                    points_awarded=row_dict.get('points_awarded', 1),
+                    competition_id=row_dict.get('competition_id', competition_id),
+                    created_at=row_dict.get('created_at', ''),
+                    updated_at=row_dict.get('updated_at', '')
                 )
             return None
 
