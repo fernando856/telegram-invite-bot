@@ -176,7 +176,7 @@ Seu link:
 
 📊 Detalhes do link:
 • Máximo de usos: {invite_link.max_uses:,}
-• Válido até: {invite_link.expire_date.strftime('%d/%m/%Y') if invite_link.expire_date else 'Sem expiração'}
+• Válido até: {invite_link.expire_date if isinstance(invite_link.expire_date, str) else (invite_link.expire_date.strftime('%d/%m/%Y') if invite_link.expire_date else 'Sem expiração')}
 • Pontos por convite: {invite_link.points_awarded}
 
 🚀 Como usar:
@@ -195,7 +195,7 @@ Seu link:
 
 📊 Detalhes do link:
 • Máximo de usos: {invite_link.max_uses:,}
-• Válido até: {invite_link.expire_date.strftime('%d/%m/%Y') if invite_link.expire_date else 'Sem expiração'}
+• Válido até: {invite_link.expire_date if isinstance(invite_link.expire_date, str) else (invite_link.expire_date.strftime('%d/%m/%Y') if invite_link.expire_date else 'Sem expiração')}
 
 🚀 Como usar:
 1. Compartilhe este link com seus contatos

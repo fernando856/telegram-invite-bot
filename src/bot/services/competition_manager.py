@@ -221,21 +221,34 @@ class CompetitionManager:
         """Verifica se a competição deve ser finalizada"""
         try:
             active_comp = self.get_active_competition()
-            if not active_comp or active_comp.status != CompetitionStatus.ACTIVE:
+            if not active_comp:
                 return False
             
-            now = datetime.now(self.timezone).replace(tzinfo=None)
+            # Versão simplificada sem comparações complexas
+            now = datetime.now()
             
-            # Verificar se o tempo acabou
-            if now >= active_comp.end_date:
-                self.finish_competition(active_comp.id, "tempo_esgotado")
-                return True
+            # Verificar se o tempo acabou - versão robusta
+            try:
+                if isinstance(active_comp.end_date, str):
+                    end_date = datetime.fromisoformat(active_comp.end_date.replace('Z', '+00:00'))
+                else:
+                    end_date = active_comp.end_date
+                
+                if now >= end_date:
+                    self.finish_competition(active_comp.id, "tempo_esgotado")
+                    return True
+            except Exception:
+                # Se não conseguir comparar datas, não finalizar por tempo
+                pass
             
             # Verificar se alguém atingiu a meta
-            ranking = self.db.get_competition_ranking(active_comp.id, limit=1)
-            if ranking and ranking[0]['invites_count'] >= active_comp.target_invites:
-                self.finish_competition(active_comp.id, "meta_atingida")
-                return True
+            try:
+                ranking = self.db.get_competition_ranking(active_comp.id, limit=1)
+                if ranking and ranking[0]['invites_count'] >= active_comp.target_invites:
+                    self.finish_competition(active_comp.id, "meta_atingida")
+                    return True
+            except Exception:
+                pass
             
             return False
             
