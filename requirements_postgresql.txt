@@ -1,0 +1,11 @@
+# Dependências principais
+python-telegram-bot==20.7
+python-dotenv==1.0.0
+pytz==2023.3
+
+# Banco de dados PostgreSQL
+psycopg2-binary==2.9.7
+
+# Logging e utilitários
+colorlog==6.7.0
+
