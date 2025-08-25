@@ -13,6 +13,7 @@ from src.database.models import DatabaseManager
 from src.bot.services.competition_manager import CompetitionManager
 from src.bot.services.invite_manager import InviteManager
 from src.bot.services.ranking_notifier import RankingNotifier
+from src.bot.services.tracking_monitor import TrackingMonitor
 from src.bot.handlers.competition_commands import get_competition_handlers
 from src.bot.handlers.invite_commands import get_invite_handlers
 
@@ -26,6 +27,7 @@ class BotManager:
         self.competition_manager = None
         self.invite_manager = None
         self.ranking_notifier = None
+        self.tracking_monitor = None
         self.is_running = False
         
     async def initialize(self):
@@ -62,6 +64,7 @@ class BotManager:
             self.competition_manager = CompetitionManager(self.db_manager, self.bot)
             self.invite_manager = InviteManager(self.db_manager, self.bot)
             self.ranking_notifier = RankingNotifier(self.db_manager, self.bot)
+            self.tracking_monitor = TrackingMonitor(self.db_manager, self.bot)
             logger.info("✅ Gerenciadores inicializados")
             
             # Criar aplicação
@@ -128,28 +131,51 @@ class BotManager:
                     link_stats = self.invite_manager.get_link_stats(invite_link)
                     
                     if link_stats:
+                        user_id = link_stats['user_id']
+                        
+                        # Validar tracking antes de processar
+                        if self.tracking_monitor:
+                            validation = self.tracking_monitor.validate_invite_tracking(user_id, invite_link)
+                            
+                            if not all([validation['link_exists'], validation['user_exists'], validation['competition_active']]):
+                                logger.warning(f"Validação de tracking falhou para usuário {user_id}: {validation}")
+                                
+                                # Tentar correção automática
+                                if not validation['participant_exists'] and validation['competition_active']:
+                                    # Adicionar como participante se necessário
+                                    active_comp = self.competition_manager.get_active_competition()
+                                    if active_comp:
+                                        self.competition_manager.add_participant(active_comp.id, user_id)
+                        
                         # Atualizar uso do link
                         await self.invite_manager.update_invite_link_usage(invite_link)
                         
                         # Registrar na competição se ativa
-                        self.competition_manager.record_invite(link_stats['user_id'], invite_link)
+                        success = self.competition_manager.record_invite(user_id, invite_link)
                         
-                        # Verificar se há competição ativa para notificações de ranking
-                        active_competition = self.competition_manager.get_active_competition()
-                        if active_competition and self.ranking_notifier:
-                            try:
-                                # Verificar mudanças no ranking após o novo convite
-                                await self.ranking_notifier.check_and_notify_ranking_changes(active_competition.id)
-                                
-                                # Verificar marcos da competição
-                                ranking = self.db_manager.get_competition_ranking(active_competition.id, limit=100)
-                                total_invites = sum(user.get('invites_count', 0) for user in ranking) if ranking else 0
-                                await self.ranking_notifier.notify_competition_milestone(active_competition.id, total_invites)
-                                
-                            except Exception as e:
-                                logger.error(f"Erro ao processar notificações de ranking: {e}")
-                        
-                        logger.info(f"Novo membro via convite: {new_member.first_name} (ID: {new_member.id}) via link de usuário {link_stats['user_id']}")
+                        if success:
+                            # Verificar se há competição ativa para notificações de ranking
+                            active_competition = self.competition_manager.get_active_competition()
+                            if active_competition and self.ranking_notifier:
+                                try:
+                                    # Verificar mudanças no ranking após o novo convite
+                                    await self.ranking_notifier.check_and_notify_ranking_changes(active_competition.id)
+                                    
+                                    # Verificar marcos da competição
+                                    ranking = self.db_manager.get_competition_ranking(active_competition.id, limit=100)
+                                    total_invites = sum(user.get('invites_count', 0) for user in ranking) if ranking else 0
+                                    await self.ranking_notifier.notify_competition_milestone(active_competition.id, total_invites)
+                                    
+                                except Exception as e:
+                                    logger.error(f"Erro ao processar notificações de ranking: {e}")
+                            
+                            logger.info(f"✅ Novo membro processado: {new_member.first_name} (ID: {new_member.id}) via usuário {user_id}")
+                        else:
+                            logger.error(f"❌ Falha ao registrar convite para usuário {user_id}")
+                    else:
+                        logger.warning(f"Link não encontrado ou inválido: {invite_link}")
+                else:
+                    logger.info(f"Novo membro sem link de convite: {new_member.first_name} (ID: {new_member.id})")
                 
         except Exception as e:
             logger.error(f"Erro ao processar novo membro: {e}")
@@ -178,6 +204,9 @@ class BotManager:
             
             # Tarefa para notificações de ranking
             asyncio.create_task(self._ranking_notifications_task())
+            
+            # Tarefa para monitoramento de saúde do tracking
+            asyncio.create_task(self._tracking_health_task())
             
             # Tarefa de heartbeat
             asyncio.create_task(self._heartbeat_task())
@@ -244,6 +273,42 @@ class BotManager:
                 
             except Exception as e:
                 logger.error(f"Erro na tarefa de notificações de ranking: {e}")
+                await asyncio.sleep(3600)  # Esperar 1 hora em caso de erro
+    
+    async def _tracking_health_task(self):
+        """Tarefa para monitoramento de saúde do tracking"""
+        while True:
+            try:
+                await asyncio.sleep(7200)  # Verificar a cada 2 horas
+                
+                if self.tracking_monitor:
+                    # Executar monitoramento de saúde
+                    health_report = self.tracking_monitor.monitor_tracking_health()
+                    
+                    # Se houver problemas, tentar correção automática
+                    if health_report['issues']:
+                        logger.warning(f"Problemas detectados no tracking: {health_report['issues']}")
+                        
+                        # Aplicar correções automáticas
+                        fixes = self.tracking_monitor.auto_fix_common_issues()
+                        
+                        if any(fixes.values()):
+                            logger.info(f"Correções automáticas aplicadas: {fixes}")
+                            
+                            # Executar novo monitoramento para verificar se os problemas foram resolvidos
+                            new_health_report = self.tracking_monitor.monitor_tracking_health()
+                            
+                            # Se ainda houver problemas críticos, enviar alerta
+                            if len(new_health_report['issues']) > 0:
+                                await self.tracking_monitor.send_health_alert(new_health_report)
+                        else:
+                            # Se não conseguiu corrigir, enviar alerta
+                            await self.tracking_monitor.send_health_alert(health_report)
+                    else:
+                        logger.info("✅ Sistema de tracking funcionando corretamente")
+                
+            except Exception as e:
+                logger.error(f"Erro na tarefa de monitoramento de saúde: {e}")
                 await asyncio.sleep(3600)  # Esperar 1 hora em caso de erro
     
     async def _heartbeat_task(self):
