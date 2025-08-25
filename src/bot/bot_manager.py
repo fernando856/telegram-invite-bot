@@ -5,7 +5,7 @@ import asyncio
 import logging
 from datetime import datetime
 from telegram import Bot
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ChatMemberHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ChatMemberHandler, ConversationHandler
 from telegram.error import TelegramError
 
 from src.config.settings import settings
