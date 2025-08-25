@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Estados da conversa para criar competição
-COMPETITION_NAME, COMPETITION_DESCRIPTION = range(2)
+COMPETITION_NAME, COMPETITION_DESCRIPTION, COMPETITION_DURATION, COMPETITION_TARGET = range(4)
 
 class CompetitionHandlers:
     def __init__(self, db_manager: DatabaseManager, competition_manager: CompetitionManager):
@@ -267,36 +267,91 @@ Use /meulink para gerar novos links de convite.
                 await update.message.reply_text("❌ Descrição muito longa. Digite no máximo 500 caracteres:")
                 return COMPETITION_DESCRIPTION
         
-        # Criar competição
+        context.user_data['competition_description'] = description
+        
+        await update.message.reply_text(
+            f"✅ **Descrição:** {description or 'Sem descrição'}\n\n"
+            "⏰ **Digite a duração da competição em dias** (1-30):\n"
+            "Exemplo: 7 (para 7 dias)",
+            parse_mode='Markdown'
+        )
+        
+        return COMPETITION_DURATION
+    
+    async def get_competition_duration(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Recebe a duração da competição"""
         try:
+            duration = int(update.message.text.strip())
+            
+            if duration < 1 or duration > 30:
+                await update.message.reply_text("❌ Duração deve ser entre 1 e 30 dias. Digite novamente:")
+                return COMPETITION_DURATION
+            
+            context.user_data['competition_duration'] = duration
+            
+            await update.message.reply_text(
+                f"✅ **Duração:** {duration} dias\n\n"
+                "🎯 **Digite a meta de convidados** (100-50000):\n"
+                "Exemplo: 5000 (para 5.000 convidados)",
+                parse_mode='Markdown'
+            )
+            
+            return COMPETITION_TARGET
+            
+        except ValueError:
+            await update.message.reply_text("❌ Digite apenas números. Exemplo: 7")
+            return COMPETITION_DURATION
+    
+    async def get_competition_target(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Recebe a meta de convidados e cria a competição"""
+        try:
+            target = int(update.message.text.strip())
+            
+            if target < 100 or target > 50000:
+                await update.message.reply_text("❌ Meta deve ser entre 100 e 50.000 convidados. Digite novamente:")
+                return COMPETITION_TARGET
+            
+            # Criar competição com configurações personalizadas
             competition = self.comp_manager.create_competition(
                 name=context.user_data['competition_name'],
-                description=description,
+                description=context.user_data['competition_description'],
+                duration_days=context.user_data['competition_duration'],
+                target_invites=target,
                 admin_user_id=update.effective_user.id
             )
             
             # Iniciar competição automaticamente
             self.comp_manager.start_competition(competition.id)
             
-            message = f"""
-🎉 **COMPETIÇÃO CRIADA E INICIADA!**
-
-🏆 **Nome:** {competition.name}
-📝 **Descrição:** {description or 'Nenhuma'}
-⏰ **Duração:** {settings.COMPETITION_DURATION_DAYS} dias
-🎯 **Meta:** {settings.COMPETITION_TARGET_INVITES:,} convidados
-🏅 **Premiação:** Top 10 participantes
-
-A competição já está ativa! 🚀
-            """.strip()
+            # Calcular data de fim
+            end_date = competition.start_date + timedelta(days=context.user_data['competition_duration'])
+            end_date_str = end_date.strftime("%d/%m/%Y às %H:%M")
             
-            await update.message.reply_text(message, parse_mode='Markdown')
+            await update.message.reply_text(
+                f"🎉 **COMPETIÇÃO CRIADA E INICIADA!**\n\n"
+                f"🏆 **Nome:** {competition.name}\n"
+                f"📝 **Descrição:** {competition.description or 'Sem descrição'}\n"
+                f"⏰ **Duração:** {context.user_data['competition_duration']} dias\n"
+                f"🎯 **Meta:** {target:,} convidados\n"
+                f"🏅 **Premiação:** Top 10 participantes\n"
+                f"📅 **Término:** {end_date_str}\n\n"
+                "A competição já está ativa! 🚀",
+                parse_mode='Markdown'
+            )
             
+            # Limpar dados da conversa
+            context.user_data.clear()
+            
+            return ConversationHandler.END
+            
+        except ValueError:
+            await update.message.reply_text("❌ Digite apenas números. Exemplo: 5000")
+            return COMPETITION_TARGET
         except Exception as e:
             logger.error(f"Erro ao criar competição: {e}")
-            await update.message.reply_text(f"❌ Erro ao criar competição: {str(e)}")
-        
-        return ConversationHandler.END
+            await update.message.reply_text("❌ Erro ao criar competição. Tente novamente.")
+            context.user_data.clear()
+            return ConversationHandler.END
     
     async def cancel_create_competition(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Cancela criação da competição"""
@@ -402,6 +457,8 @@ def get_competition_handlers(db_manager: DatabaseManager, competition_manager: C
         states={
             COMPETITION_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.get_competition_name)],
             COMPETITION_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.get_competition_description)],
+            COMPETITION_DURATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.get_competition_duration)],
+            COMPETITION_TARGET: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.get_competition_target)],
         },
         fallbacks=[CommandHandler("cancelar", handlers.cancel_create_competition)],
     )

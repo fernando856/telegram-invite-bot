@@ -20,13 +20,26 @@ class CompetitionManager:
         self.timezone = settings.timezone
         
     def create_competition(self, name: str, description: str = None, 
+                          duration_days: int = None, target_invites: int = None,
                           admin_user_id: int = None) -> Competition:
-        """Cria uma nova competição"""
+        """Cria uma nova competição com configurações personalizadas"""
         try:
             # Verificar se já existe competição ativa
             active_comp = self.db.get_active_competition()
             if active_comp and active_comp.status in [CompetitionStatus.ACTIVE, CompetitionStatus.PREPARATION]:
                 raise ValueError("Já existe uma competição ativa. Finalize-a antes de criar uma nova.")
+            
+            # Usar valores padrão se não fornecidos
+            if duration_days is None:
+                duration_days = settings.COMPETITION_DURATION_DAYS
+            if target_invites is None:
+                target_invites = settings.COMPETITION_TARGET_INVITES
+            
+            # Validar parâmetros
+            if duration_days < 1 or duration_days > 30:
+                raise ValueError("Duração deve ser entre 1 e 30 dias")
+            if target_invites < 100 or target_invites > 50000:
+                raise ValueError("Meta deve ser entre 100 e 50.000 convidados")
             
             # Calcular datas no timezone do Brasil
             now = datetime.now(self.timezone).replace(tzinfo=None)
@@ -35,11 +48,11 @@ class CompetitionManager:
                 name=name,
                 description=description,
                 start_date=now,
-                duration_days=settings.COMPETITION_DURATION_DAYS,
-                target_invites=settings.COMPETITION_TARGET_INVITES
+                duration_days=duration_days,
+                target_invites=target_invites
             )
             
-            logger.info(f"Competição criada: {name} (ID: {competition.id})")
+            logger.info(f"Competição criada: {name} (ID: {competition.id}, Duração: {duration_days}d, Meta: {target_invites})")
             return competition
             
         except Exception as e:
