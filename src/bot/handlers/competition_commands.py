@@ -9,6 +9,7 @@ from telegram.error import TelegramError
 from src.config.settings import settings
 from src.database.models import DatabaseManager
 from src.bot.services.competition_manager import CompetitionManager
+from src.bot.services.auto_registration import AutoRegistrationService
 from src.bot.utils.datetime_helper import calculate_time_remaining, format_time_remaining
 import logging
 
@@ -21,6 +22,7 @@ class CompetitionHandlers:
     def __init__(self, db_manager: DatabaseManager, competition_manager: CompetitionManager):
         self.db = db_manager
         self.comp_manager = competition_manager
+        self.auto_registration = AutoRegistrationService(db_manager)
     
     async def _check_private_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Verifica se o comando está sendo usado em chat privado"""
@@ -81,7 +83,20 @@ class CompetitionHandlers:
                 leader_text = f"@{username} ({leader['invites_count']:,} pontos)"
             
             # Buscar performance do usuário
-            user_perf = self.comp_manager.get_user_performance(active_comp.id, update.effective_user.id)
+            user = update.effective_user
+            
+            # Criar/atualizar usuário no banco
+            db_user = self.db.create_user(
+                user_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name
+            )
+            
+            # Garantir que usuário está registrado na competição ativa
+            self.auto_registration.ensure_user_in_active_competition(user.id)
+            
+            user_perf = self.comp_manager.get_user_performance(active_comp.id, user.id)
             
             if user_perf.get('is_participant'):
                 user_text = f"📊 Seu desempenho: {user_perf['invites_count']:,} pontos (posição #{user_perf['position']})"
@@ -128,7 +143,20 @@ class CompetitionHandlers:
                 )
                 return
             
-            user_perf = self.comp_manager.get_user_performance(active_comp.id, update.effective_user.id)
+            user = update.effective_user
+            
+            # Criar/atualizar usuário no banco
+            db_user = self.db.create_user(
+                user_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name
+            )
+            
+            # Garantir que usuário está registrado na competição ativa
+            self.auto_registration.ensure_user_in_active_competition(user.id)
+            
+            user_perf = self.comp_manager.get_user_performance(active_comp.id, user.id)
             
             if not user_perf.get('is_participant'):
                 await update.message.reply_text(
@@ -220,7 +248,20 @@ Use /meulink para gerar novos links de convite.
 """
             
             # Adicionar posição do usuário se não estiver no top 10
-            user_perf = self.comp_manager.get_user_performance(active_comp.id, update.effective_user.id)
+            user = update.effective_user
+            
+            # Criar/atualizar usuário no banco
+            db_user = self.db.create_user(
+                user_id=user.id,
+                username=user.username,
+                first_name=user.first_name,
+                last_name=user.last_name
+            )
+            
+            # Garantir que usuário está registrado na competição ativa
+            self.auto_registration.ensure_user_in_active_competition(user.id)
+            
+            user_perf = self.comp_manager.get_user_performance(active_comp.id, user.id)
             if user_perf.get('is_participant') and user_perf['position'] > 10:
                 message += f"Sua posição: #{user_perf['position']} ({user_perf['invites_count']:,} pontos)"
             elif not user_perf.get('is_participant'):
