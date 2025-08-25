@@ -14,6 +14,7 @@ from src.bot.services.competition_manager import CompetitionManager
 from src.bot.services.invite_manager import InviteManager
 from src.bot.services.ranking_notifier import RankingNotifier
 from src.bot.services.tracking_monitor import TrackingMonitor
+from src.bot.services.safe_notifier import SafeNotifier
 from src.bot.handlers.competition_commands import get_competition_handlers
 from src.bot.handlers.invite_commands import get_invite_handlers
 
@@ -28,6 +29,7 @@ class BotManager:
         self.invite_manager = None
         self.ranking_notifier = None
         self.tracking_monitor = None
+        self.safe_notifier = None
         self.is_running = False
         
     async def initialize(self):
@@ -44,7 +46,7 @@ class BotManager:
             bot_info = await self.bot.get_me()
             logger.info(f"✅ Bot conectado: @{bot_info.username} ({bot_info.first_name})")
             
-            # Verificar permissões no canal
+            # Verificar permissões no canal (opcional para desenvolvimento)
             try:
                 chat = await self.bot.get_chat(settings.CHAT_ID)
                 logger.info(f"✅ Canal configurado: {chat.title} ({chat.id})")
@@ -57,10 +59,13 @@ class BotManager:
                     logger.info("✅ Bot é administrador do canal")
                     
             except TelegramError as e:
-                logger.error(f"❌ Erro ao verificar canal: {e}")
-                raise
+                logger.warning(f"⚠️ Canal não acessível: {e}")
+                logger.warning(f"⚠️ Bot funcionará sem notificações no canal")
+                logger.warning(f"⚠️ Verifique se o bot foi adicionado ao canal: {settings.CHAT_ID}")
+                # Não interromper a inicialização por causa do canal
             
             # Inicializar gerenciadores
+            self.safe_notifier = SafeNotifier(self.bot)
             self.competition_manager = CompetitionManager(self.db_manager, self.bot)
             self.invite_manager = InviteManager(self.db_manager, self.bot)
             self.ranking_notifier = RankingNotifier(self.db_manager, self.bot)
