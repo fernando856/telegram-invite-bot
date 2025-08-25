@@ -374,9 +374,8 @@ Use /meulink para gerar novos links de convite.
             
             if success:
                 await update.message.reply_text(
-                    f"✅ **Competição \"{active_comp.name}\" finalizada com sucesso!**\n\n"
-                    "O ranking final será enviado no canal em breve. 🏆",
-                    parse_mode='Markdown'
+                    f"✅ Competição \"{active_comp.name}\" finalizada com sucesso!\n\n"
+                    "O ranking final será enviado no canal em breve. 🏆"
                 )
             else:
                 await update.message.reply_text("❌ Erro ao finalizar competição.")
