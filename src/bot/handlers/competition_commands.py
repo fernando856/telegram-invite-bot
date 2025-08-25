@@ -221,16 +221,14 @@ Use /meulink para gerar novos links de convite.
         active_comp = self.comp_manager.get_active_competition()
         if active_comp:
             await update.message.reply_text(
-                f"⚠️ **Já existe uma competição ativa:** \"{active_comp.name}\"\n\n"
-                "Finalize-a primeiro com /finalizar_competicao",
-                parse_mode='Markdown'
+                f"⚠️ Já existe uma competição ativa: \"{active_comp.name}\"\n\n"
+                "Finalize-a primeiro com /finalizar_competicao"
             )
             return ConversationHandler.END
         
         await update.message.reply_text(
-            "🏆 **Criando nova competição!**\n\n"
-            "📝 Digite o nome da competição:",
-            parse_mode='Markdown'
+            "🏆 Criando nova competição!\n\n"
+            "📝 Digite o nome da competição:"
         )
         
         return COMPETITION_NAME
