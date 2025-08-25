@@ -60,7 +60,7 @@ async def main():
         logger.info(f"   • Port: {settings.POSTGRES_PORT}")
         logger.info(f"   • Database: {settings.POSTGRES_DB}")
         logger.info(f"   • User: {settings.POSTGRES_USER}")
-        logger.info(f"   • Password: {'*' * len(settings.POSTGRES_PASSWORD)}"))
+        logger.info(f"   • Password: {'*' * len(settings.POSTGRES_PASSWORD)}")
         
         # Iniciar bot
         await bot_manager.start()
