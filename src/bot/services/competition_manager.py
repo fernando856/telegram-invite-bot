@@ -10,6 +10,7 @@ from telegram.error import TelegramError
 from src.config.settings import settings
 from src.database.models import DatabaseManager, Competition, CompetitionStatus, CompetitionParticipant
 from src.bot.utils.datetime_helper import safe_datetime_conversion
+from src.bot.services.points_sync_manager import PointsSyncManager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ class CompetitionManager:
     def __init__(self, db_manager: DatabaseManager, bot: Bot = None):
         self.db = db_manager
         self.bot = bot
+        self.points_sync = PointsSyncManager(db_manager)
         self.timezone = settings.timezone
         
     def create_competition(self, name: str, description: str = None, 
@@ -128,7 +130,7 @@ class CompetitionManager:
             return False
     
     def record_invite(self, user_id: int, invite_link: str) -> bool:
-        """Registra um convite na competição ativa"""
+        """Registra um convite na competição ativa com sincronização automática"""
         try:
             active_comp = self.get_active_competition()
             if not active_comp or active_comp.status != CompetitionStatus.ACTIVE:
@@ -137,23 +139,36 @@ class CompetitionManager:
             # Adicionar participante se não existir
             self.add_participant(active_comp.id, user_id)
             
-            # Buscar estatísticas atuais do usuário
-            stats = self.db.get_user_competition_stats(active_comp.id, user_id)
-            current_invites = stats['invites_count'] if stats else 0
-            new_invites = current_invites + 1
-            
-            # Atualizar contador de convites
-            success = self.db.update_participant_invites(active_comp.id, user_id, new_invites)
+            # Usar sincronização automática baseada no link
+            success = self.points_sync.auto_sync_on_new_member(user_id, invite_link)
             
             if success:
-                logger.info(f"Convite registrado: usuário {user_id}, total {new_invites}")
+                logger.info(f"✅ Convite registrado e sincronizado: usuário {user_id}")
+                
+                # Buscar pontos atualizados para verificar marcos
+                stats = self.db.get_user_competition_stats(active_comp.id, user_id)
+                current_invites = stats['invites_count'] if stats else 0
                 
                 # Verificar marcos e notificações
-                asyncio.create_task(self._check_milestones(active_comp, user_id, new_invites))
+                asyncio.create_task(self._check_milestones(active_comp, user_id, current_invites))
                 
                 # Verificar se atingiu a meta
-                if new_invites >= active_comp.target_invites:
+                if current_invites >= active_comp.target_invites:
                     asyncio.create_task(self._handle_target_reached(active_comp, user_id))
+            else:
+                # Fallback para método antigo se sincronização falhar
+                logger.warning(f"⚠️ Sincronização falhou, usando método tradicional para usuário {user_id}")
+                
+                # Buscar estatísticas atuais do usuário
+                stats = self.db.get_user_competition_stats(active_comp.id, user_id)
+                current_invites = stats['invites_count'] if stats else 0
+                new_invites = current_invites + 1
+                
+                # Atualizar contador de convites
+                success = self.db.update_participant_invites(active_comp.id, user_id, new_invites)
+                
+                if success:
+                    logger.info(f"Convite registrado (método tradicional): usuário {user_id}, total {new_invites}")
             
             return success
             
