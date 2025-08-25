@@ -27,17 +27,28 @@ class PointsSyncManager:
                 
                 total_uses = result['total_uses'] if result else 0
                 
+                # Buscar data do último convite real
+                last_invite_result = conn.execute("""
+                    SELECT MAX(created_at) as last_invite
+                    FROM invite_links 
+                    WHERE user_id = ? AND competition_id = ? AND uses > 0
+                """, (user_id, competition_id)).fetchone()
+                
+                last_invite_date = last_invite_result['last_invite'] if last_invite_result and last_invite_result['last_invite'] else None
+                
                 # Atualizar pontos na competição
-                updated = conn.execute("""
-                    UPDATE competition_participants 
-                    SET invites_count = ?, 
-                        last_invite_at = CASE 
-                            WHEN ? > 0 THEN datetime('now') 
-                            ELSE last_invite_at 
-                        END,
-                        updated_at = datetime('now')
-                    WHERE competition_id = ? AND user_id = ?
-                """, (total_uses, total_uses, competition_id, user_id))
+                if last_invite_date:
+                    updated = conn.execute("""
+                        UPDATE competition_participants 
+                        SET invites_count = ?, last_invite_at = ?
+                        WHERE competition_id = ? AND user_id = ?
+                    """, (total_uses, last_invite_date, competition_id, user_id))
+                else:
+                    updated = conn.execute("""
+                        UPDATE competition_participants 
+                        SET invites_count = ?
+                        WHERE competition_id = ? AND user_id = ?
+                    """, (total_uses, competition_id, user_id))
                 
                 conn.commit()
                 

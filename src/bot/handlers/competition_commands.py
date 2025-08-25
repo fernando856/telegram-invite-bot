@@ -176,6 +176,16 @@ class CompetitionHandlers:
             days_remaining = max(1, time_left.days)
             projected_total = user_perf['invites_count'] + (user_perf['avg_per_day'] * days_remaining)
             
+            # Formatar data do último convite
+            last_invite_display = "Nunca"
+            if user_perf.get('last_invite_at'):
+                try:
+                    from datetime import datetime
+                    last_invite_dt = datetime.fromisoformat(user_perf['last_invite_at'].replace('Z', '+00:00'))
+                    last_invite_display = last_invite_dt.strftime("%d/%m/%Y às %H:%M")
+                except:
+                    last_invite_display = user_perf['last_invite_at']
+            
             message = f"""
 📊 **SEU DESEMPENHO NA COMPETIÇÃO**
 
@@ -187,7 +197,7 @@ class CompetitionHandlers:
 📊 **Estatísticas:**
 • Média por dia: {user_perf['avg_per_day']:.1f} convites
 • Projeção final: {projected_total:.0f} convites
-• Último convite: {user_perf['last_invite_at'] or 'Nunca'}
+• Último convite: {last_invite_display}
 
 🚀 **Continue convidando para subir no ranking!**
 Use /meulink para gerar novos links de convite.

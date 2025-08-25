@@ -396,6 +396,7 @@ Boa sorte na competição! 🍀"""
 🚀 **Comandos úteis:**
 • /meulink - Gerar novo link
 • /ranking - Ver ranking geral
+• /meususuarios - Ver seus convidados
 """
             
             if active_comp:
@@ -440,6 +441,7 @@ Participe da competição e concorra a prêmios!
 • /start - Iniciar o bot e ver boas-vindas
 • /meulink - Gerar seu link único de convite
 • /meusconvites - Ver suas estatísticas e histórico
+• /meususuarios - Ver lista de usuários que você convidou
 • /help - Esta mensagem de ajuda
 
 🎯 **Como Funciona:**
@@ -447,6 +449,7 @@ Participe da competição e concorra a prêmios!
 2. Compartilhe o link com seus contatos
 3. Cada pessoa que entrar pelo seu link conta pontos
 4. Acompanhe suas estatísticas com /meusconvites
+5. Veja quem você convidou com /meususuarios
 
 """
             
