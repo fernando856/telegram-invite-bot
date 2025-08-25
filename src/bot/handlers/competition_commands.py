@@ -385,10 +385,10 @@ Use /meulink para gerar novos links de convite.
                 
         except Exception as e:
             logger.error(f"Erro ao finalizar competição: {e}")
-            await update.message.reply_text(f"❌ Erro ao finalizar competição: {str(e)}")
+            await update.message.reply_text("❌ Erro ao finalizar competição.")
     
     async def admin_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Comando /status_admin - Status detalhado para admins"""
+        """Comando /status_admin - Status administrativo"""
         user_id = update.effective_user.id
         
         if user_id not in settings.admin_ids_list:
@@ -399,52 +399,41 @@ Use /meulink para gerar novos links de convite.
             active_comp = self.comp_manager.get_active_competition()
             
             if not active_comp:
-                await update.message.reply_text("🔴 **Nenhuma competição ativa.**")
+                await update.message.reply_text(
+                    "🔴 **Nenhuma competição ativa**\n\n"
+                    "Use /iniciar_competicao para criar uma nova.",
+                    parse_mode='Markdown'
+                )
                 return
             
             status = self.comp_manager.get_competition_status(active_comp.id)
-            stats = status['stats']
-            
-            # Calcular tempo restante
-            time_left = status['time_left']
-            if time_left.total_seconds() > 0:
-                days = time_left.days
-                hours, remainder = divmod(time_left.seconds, 3600)
-                minutes, _ = divmod(remainder, 60)
-                time_str = f"{days}d, {hours}h, {minutes}min"
-            else:
-                time_str = "Tempo esgotado!"
-            
-            # Calcular projeções
-            days_elapsed = (datetime.now() - active_comp.start_date).days + 1
-            avg_per_day = stats['total_invites'] / days_elapsed if days_elapsed > 0 else 0
             
             message = f"""
-🔧 **STATUS ADMINISTRATIVO**
+👑 **STATUS ADMINISTRATIVO**
 
 🏆 **Competição:** {active_comp.name}
-📊 **Status:** {active_comp.status.value.upper()}
-⏰ **Tempo restante:** {time_str}
+📝 **Descrição:** {active_comp.description or 'Sem descrição'}
+📅 **Início:** {active_comp.start_date.strftime('%d/%m/%Y %H:%M')}
+📅 **Fim:** {active_comp.end_date.strftime('%d/%m/%Y %H:%M')}
+🎯 **Meta:** {active_comp.target_invites:,} convidados
 
-📈 **Estatísticas:**
-• Participantes: {stats['total_participants']:,}
-• Total de convites: {stats['total_invites']:,}
-• Recorde individual: {stats['max_invites']:,}
-• Média geral: {stats['avg_invites']:.1f}
-• Média por dia: {avg_per_day:.1f}
+📊 **Estatísticas:**
+• Participantes: {status['stats']['total_participants']:,}
+• Total de convites: {status['stats']['total_invites']:,}
+• Links ativos: {status['stats']['active_links']:,}
 
-🎯 **Meta:** {active_comp.target_invites:,} convites
-📊 **Progresso:** {(stats['max_invites'] / active_comp.target_invites * 100):.1f}%
-
-🛠️ **Comandos disponíveis:**
-/finalizar_competicao - Finalizar manualmente
-/iniciar_competicao - Criar nova competição
-            """.strip()
+👑 **Top 3:**
+"""
+            
+            for i, participant in enumerate(status['top_3'][:3]):
+                medals = ['🥇', '🥈', '🥉']
+                username = participant['username'] or participant['first_name'] or f"Usuário {participant['user_id']}"
+                message += f"{medals[i]} @{username} - {participant['invites_count']:,} pontos\n"
             
             await update.message.reply_text(message, parse_mode='Markdown')
             
         except Exception as e:
-            logger.error(f"Erro no comando /status_admin: {e}")
+            logger.error(f"Erro no status admin: {e}")
             await update.message.reply_text("❌ Erro ao buscar status administrativo.")
 
 def get_competition_handlers(db_manager: DatabaseManager, competition_manager: CompetitionManager):
