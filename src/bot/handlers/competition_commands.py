@@ -180,7 +180,6 @@ class CompetitionHandlers:
             last_invite_display = "Nunca"
             if user_perf.get('last_invite_at'):
                 try:
-                    from datetime import datetime
                     last_invite_dt = datetime.fromisoformat(user_perf['last_invite_at'].replace('Z', '+00:00'))
                     last_invite_display = last_invite_dt.strftime("%d/%m/%Y às %H:%M")
                 except:
