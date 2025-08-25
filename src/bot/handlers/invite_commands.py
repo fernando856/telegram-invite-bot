@@ -10,6 +10,7 @@ from src.config.settings import settings
 from src.database.models import DatabaseManager
 from src.bot.services.competition_manager import CompetitionManager
 from src.bot.services.invite_manager import InviteManager
+from src.bot.services.auto_registration import AutoRegistrationService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,7 @@ class InviteHandlers:
         self.db = db_manager
         self.invite_manager = invite_manager
         self.comp_manager = competition_manager
+        self.auto_registration = AutoRegistrationService(db_manager)
     
     async def _check_private_chat(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Verifica se o comando está sendo usado em chat privado"""
@@ -158,6 +160,9 @@ Aguarde o próximo desafio! 🚀
                 first_name=user.first_name,
                 last_name=user.last_name
             )
+            
+            # Garantir que usuário está registrado na competição ativa
+            self.auto_registration.ensure_user_in_active_competition(user.id)
             
             # Verificar se usuário já tem link para esta competição
             existing_link = self.db.get_user_invite_link(user.id, active_comp.id)
