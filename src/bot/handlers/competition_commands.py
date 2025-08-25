@@ -321,10 +321,21 @@ Use /meulink para gerar novos links de convite.
             # Iniciar competição automaticamente
             self.comp_manager.start_competition(competition.id)
             
-            # Calcular data de fim
+            # Calcular data de fim com tratamento robusto
             duration_days = context.user_data['competition_duration']
-            end_date = competition.start_date + timedelta(days=duration_days)
-            end_date_str = end_date.strftime("%d/%m/%Y às %H:%M")
+            
+            try:
+                # Tratar start_date que pode ser string ou datetime
+                if isinstance(competition.start_date, str):
+                    start_date = datetime.fromisoformat(competition.start_date.replace('Z', '+00:00'))
+                else:
+                    start_date = competition.start_date
+                
+                end_date = start_date + timedelta(days=duration_days)
+                end_date_str = end_date.strftime("%d/%m/%Y às %H:%M")
+            except Exception:
+                # Fallback seguro
+                end_date_str = f"Em {duration_days} dias"
             
             await update.message.reply_text(
                 f"🎉 COMPETIÇÃO CRIADA E INICIADA!\n\n"
