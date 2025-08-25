@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class CompetitionManager:
-    def __init__(self, db_manager: DatabaseManager, bot: Bot):
+    def __init__(self, db_manager: DatabaseManager, bot: Bot = None):
         self.db = db_manager
         self.bot = bot
         self.timezone = settings.timezone
