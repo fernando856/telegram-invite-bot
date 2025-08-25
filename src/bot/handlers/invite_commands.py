@@ -110,6 +110,16 @@ Aguarde o próximo desafio! 🚀
         try:
             user = update.effective_user
             
+            # Verificar se há competição ativa primeiro
+            active_comp = self.comp_manager.get_active_competition()
+            
+            if not active_comp:
+                await update.message.reply_text(
+                    "🔴 Nenhuma competição ativa no momento.\n\n"
+                    "Aguarde o próximo desafio! 🚀"
+                )
+                return
+            
             # Criar/atualizar usuário no banco
             db_user = self.db.create_user(
                 user_id=user.id,
@@ -118,54 +128,45 @@ Aguarde o próximo desafio! 🚀
                 last_name=user.last_name
             )
             
-            # Verificar competição ativa
-            active_comp = self.comp_manager.get_active_competition()
-            competition_id = active_comp.id if active_comp else None
-            
             # Gerar link de convite
-            link_name = f"Link de {user.first_name or user.username or 'Usuário'}"
-            if active_comp:
-                link_name += f" - {active_comp.name}"
+            link_name = f"Link de {user.first_name or user.username or 'Usuário'} - {active_comp.name}"
             
             invite_link = await self.invite_manager.create_invite_link(
                 user_id=user.id,
                 name=link_name,
                 max_uses=settings.MAX_INVITE_USES,
                 expire_days=settings.LINK_EXPIRY_DAYS,
-                competition_id=competition_id
+                competition_id=active_comp.id
             )
             
             if not invite_link:
                 await update.message.reply_text("❌ Erro ao gerar link de convite. Tente novamente.")
                 return
             
-            # Adicionar usuário à competição se ativa
-            if active_comp:
-                self.comp_manager.add_participant(active_comp.id, user.id)
+            # Adicionar usuário à competição
+            self.comp_manager.add_participant(active_comp.id, user.id)
             
-            # Preparar mensagem
-            if active_comp:
-                # Calcular tempo restante - versão simplificada
-                try:
-                    now = datetime.now()
-                    if isinstance(active_comp.end_date, str):
-                        end_date = datetime.fromisoformat(active_comp.end_date.replace('Z', '+00:00'))
-                    else:
-                        end_date = active_comp.end_date
-                    
-                    time_left = end_date - now if end_date > now else timedelta(0)
-                    
-                    if time_left.total_seconds() > 0:
-                        days = time_left.days
-                        hours, remainder = divmod(time_left.seconds, 3600)
-                        minutes, _ = divmod(remainder, 60)
-                        time_str = f"{days}d, {hours}h, {minutes}min"
-                    else:
-                        time_str = "Tempo esgotado!"
-                except Exception:
-                    time_str = "Calculando..."
+            # Calcular tempo restante - versão simplificada
+            try:
+                now = datetime.now()
+                if isinstance(active_comp.end_date, str):
+                    end_date = datetime.fromisoformat(active_comp.end_date.replace('Z', '+00:00'))
+                else:
+                    end_date = active_comp.end_date
                 
-                message = f"""🔗 SEU LINK DE CONVITE GERADO!
+                time_left = end_date - now if end_date > now else timedelta(0)
+                
+                if time_left.total_seconds() > 0:
+                    days = time_left.days
+                    hours, remainder = divmod(time_left.seconds, 3600)
+                    minutes, _ = divmod(remainder, 60)
+                    time_str = f"{days}d, {hours}h, {minutes}min"
+                else:
+                    time_str = "Tempo esgotado!"
+            except Exception:
+                time_str = "Calculando..."
+                
+            message = f"""🔗 SEU LINK DE CONVITE GERADO!
 
 🏆 Competição: {active_comp.name}
 ⏰ Tempo restante: {time_str}
@@ -187,22 +188,6 @@ Seu link:
 💡 Dica: Compartilhe em grupos, redes sociais e com amigos para maximizar seus convites!
 
 Boa sorte na competição! 🍀"""
-            else:
-                message = f"""🔗 SEU LINK DE CONVITE GERADO!
-
-Seu link:
-{invite_link.invite_link}
-
-📊 Detalhes do link:
-• Máximo de usos: {invite_link.max_uses:,}
-• Válido até: {invite_link.expire_date if isinstance(invite_link.expire_date, str) else (invite_link.expire_date.strftime('%d/%m/%Y') if invite_link.expire_date else 'Sem expiração')}
-
-🚀 Como usar:
-1. Compartilhe este link com seus contatos
-2. Cada pessoa que entrar será contabilizada
-3. Use /meusconvites para ver suas estatísticas
-
-💡 Dica: Compartilhe em grupos, redes sociais e com amigos!"""
             
             await update.message.reply_text(message)
             
