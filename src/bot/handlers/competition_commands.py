@@ -322,19 +322,19 @@ Use /meulink para gerar novos links de convite.
             self.comp_manager.start_competition(competition.id)
             
             # Calcular data de fim
-            end_date = competition.start_date + timedelta(days=context.user_data['competition_duration'])
+            duration_days = context.user_data['competition_duration']
+            end_date = competition.start_date + timedelta(days=duration_days)
             end_date_str = end_date.strftime("%d/%m/%Y às %H:%M")
             
             await update.message.reply_text(
-                f"🎉 **COMPETIÇÃO CRIADA E INICIADA!**\n\n"
-                f"🏆 **Nome:** {competition.name}\n"
-                f"📝 **Descrição:** {competition.description or 'Sem descrição'}\n"
-                f"⏰ **Duração:** {context.user_data['competition_duration']} dias\n"
-                f"🎯 **Meta:** {target:,} convidados\n"
-                f"🏅 **Premiação:** Top 10 participantes\n"
-                f"📅 **Término:** {end_date_str}\n\n"
-                "A competição já está ativa! 🚀",
-                parse_mode='Markdown'
+                f"🎉 COMPETIÇÃO CRIADA E INICIADA!\n\n"
+                f"🏆 Nome: {competition.name}\n"
+                f"📝 Descrição: {competition.description or 'Sem descrição'}\n"
+                f"⏰ Duração: {duration_days} dias\n"
+                f"🎯 Meta: {target:,} convidados\n"
+                f"🏅 Premiação: Top 10 participantes\n"
+                f"📅 Término: {end_date_str}\n\n"
+                "A competição já está ativa! 🚀"
             )
             
             # Limpar dados da conversa
