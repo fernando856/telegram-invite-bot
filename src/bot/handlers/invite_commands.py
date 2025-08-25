@@ -37,35 +37,43 @@ class InviteHandlers:
             active_comp = self.comp_manager.get_active_competition()
             
             if active_comp:
-                # Calcular tempo restante
-                now = datetime.now(settings.timezone).replace(tzinfo=None)
-                time_left = active_comp.end_date - now if active_comp.end_date > now else timedelta(0)
+                # Calcular tempo restante - versão simplificada
+                try:
+                    now = datetime.now()
+                    if isinstance(active_comp.end_date, str):
+                        # Se end_date é string, converter para datetime
+                        end_date = datetime.fromisoformat(active_comp.end_date.replace('Z', '+00:00'))
+                    else:
+                        end_date = active_comp.end_date
+                    
+                    time_left = end_date - now if end_date > now else timedelta(0)
+                    
+                    if time_left.total_seconds() > 0:
+                        days = time_left.days
+                        hours, remainder = divmod(time_left.seconds, 3600)
+                        minutes, _ = divmod(remainder, 60)
+                        time_str = f"{days}d, {hours}h, {minutes}min"
+                    else:
+                        time_str = "Tempo esgotado!"
+                except Exception:
+                    time_str = "Calculando..."
                 
-                if time_left.total_seconds() > 0:
-                    days = time_left.days
-                    hours, remainder = divmod(time_left.seconds, 3600)
-                    minutes, _ = divmod(remainder, 60)
-                    time_str = f"{days}d, {hours}h, {minutes}min"
-                else:
-                    time_str = "Tempo esgotado!"
-                
-                message = f"""
-🎉 **Bem-vindo ao Bot de Ranking de Convites!**
+                message = f"""🎉 Bem-vindo ao Bot de Ranking de Convites!
 
-🏆 **COMPETIÇÃO ATIVA: "{active_comp.name}"**
+🏆 COMPETIÇÃO ATIVA: "{active_comp.name}"
 {active_comp.description or ''}
 
-⏰ **Tempo restante:** {time_str}
-🎯 **Meta:** {active_comp.target_invites:,} convidados
-🏅 **Premiação:** Top 10 participantes
+⏰ Tempo restante: {time_str}
+🎯 Meta: {active_comp.target_invites:,} convidados
+🏅 Premiação: Top 10 participantes
 
-🚀 **Como participar:**
+🚀 Como participar:
 1. Use /meulink para gerar seu link único
 2. Compartilhe o link para convidar pessoas
 3. Acompanhe sua posição com /ranking
 4. Veja suas estatísticas com /meudesempenho
 
-📋 **Comandos disponíveis:**
+📋 Comandos disponíveis:
 • /meulink - Gerar link de convite
 • /competicao - Ver status da competição
 • /ranking - Ver top 10 atual
@@ -73,28 +81,25 @@ class InviteHandlers:
 • /meusconvites - Histórico de convites
 • /help - Ajuda completa
 
-🎮 **Boa sorte na competição!** 🍀
-                """.strip()
+🎮 Boa sorte na competição! 🍀"""
             else:
-                message = f"""
-🎉 **Bem-vindo ao Bot de Ranking de Convites!**
+                message = f"""🎉 Bem-vindo ao Bot de Ranking de Convites!
 
 Olá, {user.first_name}! 👋
 
 Este bot permite que você gere links únicos de convite para o canal e acompanhe quantas pessoas você trouxe.
 
-📋 **Comandos disponíveis:**
+📋 Comandos disponíveis:
 • /meulink - Gerar link de convite único
 • /meusconvites - Ver suas estatísticas
 • /help - Ajuda completa
 
-🔴 **Nenhuma competição ativa no momento.**
+🔴 Nenhuma competição ativa no momento.
 Aguarde o próximo desafio! 🚀
 
-💡 **Dica:** Você pode gerar links mesmo sem competição ativa!
-                """.strip()
+💡 Dica: Você pode gerar links mesmo sem competição ativa!"""
             
-            await update.message.reply_text(message, parse_mode='Markdown')
+            await update.message.reply_text(message)
             
         except Exception as e:
             logger.error(f"Erro no comando /start: {e}")
@@ -140,62 +145,66 @@ Aguarde o próximo desafio! 🚀
             
             # Preparar mensagem
             if active_comp:
-                # Calcular tempo restante
-                now = datetime.now(settings.timezone).replace(tzinfo=None)
-                time_left = active_comp.end_date - now if active_comp.end_date > now else timedelta(0)
+                # Calcular tempo restante - versão simplificada
+                try:
+                    now = datetime.now()
+                    if isinstance(active_comp.end_date, str):
+                        end_date = datetime.fromisoformat(active_comp.end_date.replace('Z', '+00:00'))
+                    else:
+                        end_date = active_comp.end_date
+                    
+                    time_left = end_date - now if end_date > now else timedelta(0)
+                    
+                    if time_left.total_seconds() > 0:
+                        days = time_left.days
+                        hours, remainder = divmod(time_left.seconds, 3600)
+                        minutes, _ = divmod(remainder, 60)
+                        time_str = f"{days}d, {hours}h, {minutes}min"
+                    else:
+                        time_str = "Tempo esgotado!"
+                except Exception:
+                    time_str = "Calculando..."
                 
-                if time_left.total_seconds() > 0:
-                    days = time_left.days
-                    hours, remainder = divmod(time_left.seconds, 3600)
-                    minutes, _ = divmod(remainder, 60)
-                    time_str = f"{days}d, {hours}h, {minutes}min"
-                else:
-                    time_str = "Tempo esgotado!"
-                
-                message = f"""
-🔗 **SEU LINK DE CONVITE GERADO!**
+                message = f"""🔗 SEU LINK DE CONVITE GERADO!
 
-🏆 **Competição:** {active_comp.name}
-⏰ **Tempo restante:** {time_str}
-🎯 **Meta:** {active_comp.target_invites:,} convidados
+🏆 Competição: {active_comp.name}
+⏰ Tempo restante: {time_str}
+🎯 Meta: {active_comp.target_invites:,} convidados
 
-**Seu link:**
+Seu link:
 {invite_link.invite_link}
 
-📊 **Detalhes do link:**
+📊 Detalhes do link:
 • Máximo de usos: {invite_link.max_uses:,}
 • Válido até: {invite_link.expire_date.strftime('%d/%m/%Y') if invite_link.expire_date else 'Sem expiração'}
 • Pontos por convite: {invite_link.points_awarded}
 
-🚀 **Como usar:**
+🚀 Como usar:
 1. Compartilhe este link com seus contatos
 2. Cada pessoa que entrar conta 1 ponto
 3. Acompanhe sua posição com /ranking
 
-💡 **Dica:** Compartilhe em grupos, redes sociais e com amigos para maximizar seus convites!
+💡 Dica: Compartilhe em grupos, redes sociais e com amigos para maximizar seus convites!
 
-Boa sorte na competição! 🍀
-                """.strip()
+Boa sorte na competição! 🍀"""
             else:
-                message = f"""
-🔗 **SEU LINK DE CONVITE GERADO!**
+                message = f"""🔗 SEU LINK DE CONVITE GERADO!
 
-**Seu link:**
+Seu link:
 {invite_link.invite_link}
 
-📊 **Detalhes do link:**
+📊 Detalhes do link:
 • Máximo de usos: {invite_link.max_uses:,}
 • Válido até: {invite_link.expire_date.strftime('%d/%m/%Y') if invite_link.expire_date else 'Sem expiração'}
 
-🚀 **Como usar:**
+🚀 Como usar:
 1. Compartilhe este link com seus contatos
 2. Cada pessoa que entrar será contabilizada
 3. Use /meusconvites para ver suas estatísticas
 
-💡 **Dica:** Compartilhe em grupos, redes sociais e com amigos!
-                """.strip()
+💡 Dica: Compartilhe em grupos, redes sociais e com amigos!"""
             
-            await update.message.reply_text(message, parse_mode='Markdown')
+            await update.message.reply_text(message)
             
         except Exception as e:
             logger.error(f"Erro no comando /meulink: {e}")
