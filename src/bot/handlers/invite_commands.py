@@ -185,15 +185,50 @@ Aguarde o próximo desafio! 🚀
             max_uses = getattr(invite_link, 'max_uses', settings.MAX_INVITE_USES)
             points_awarded = getattr(invite_link, 'points_awarded', 1)
             
-            # Tratar data de expiração com segurança
+            # Tratar data de expiração com segurança e fuso horário de Brasília
             expire_date_str = "Sem expiração"
             try:
                 expire_date = getattr(invite_link, 'expire_date', None)
                 if expire_date:
                     if isinstance(expire_date, str):
-                        expire_date_str = expire_date
+                        # Tentar converter string para datetime
+                        try:
+                            from datetime import datetime
+                            import pytz
+                            
+                            # Parse da string datetime
+                            if 'T' in expire_date:
+                                dt = datetime.fromisoformat(expire_date.replace('Z', '+00:00'))
+                            else:
+                                dt = datetime.fromisoformat(expire_date)
+                            
+                            # Converter para fuso horário de Brasília (GMT-3)
+                            brasilia_tz = pytz.timezone('America/Sao_Paulo')
+                            if dt.tzinfo is None:
+                                # Se não tem timezone, assumir UTC
+                                dt = pytz.UTC.localize(dt)
+                            
+                            dt_brasilia = dt.astimezone(brasilia_tz)
+                            expire_date_str = dt_brasilia.strftime('%d/%m/%Y às %H:%M')
+                            
+                        except Exception:
+                            # Se falhar, usar string original formatada
+                            expire_date_str = expire_date.split('.')[0].replace('-', '/').replace('T', ' às ')
                     else:
-                        expire_date_str = expire_date.strftime('%d/%m/%Y')
+                        # Se é objeto datetime
+                        try:
+                            import pytz
+                            brasilia_tz = pytz.timezone('America/Sao_Paulo')
+                            
+                            if expire_date.tzinfo is None:
+                                # Se não tem timezone, assumir UTC
+                                expire_date = pytz.UTC.localize(expire_date)
+                            
+                            dt_brasilia = expire_date.astimezone(brasilia_tz)
+                            expire_date_str = dt_brasilia.strftime('%d/%m/%Y às %H:%M')
+                            
+                        except Exception:
+                            expire_date_str = expire_date.strftime('%d/%m/%Y às %H:%M')
             except Exception:
                 expire_date_str = "Sem expiração"
                 
