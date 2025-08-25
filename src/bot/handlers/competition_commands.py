@@ -348,6 +348,47 @@ Use /meulink para gerar novos links de convite.
                 "A competição já está ativa! 🚀"
             )
             
+            # Enviar notificação no canal
+            try:
+                from src.config.settings import settings
+                
+                # Obter informações do bot
+                bot_info = await context.bot.get_me()
+                bot_username = bot_info.username
+                
+                channel_message = f"""🏁 **NOVA COMPETIÇÃO INICIADA!** 🏁
+
+🏆 **{competition.name}**
+📝 {competition.description or 'Participe e ganhe prêmios incríveis!'}
+
+⏰ **Duração:** {duration_days} dias
+🎯 **Meta:** {target:,} convidados
+📅 **Término:** {end_date_str}
+
+🚀 **COMO PARTICIPAR:**
+
+1️⃣ Clique aqui: @{bot_username}
+2️⃣ Digite /start para começar
+3️⃣ Use /meulink para gerar seu link único
+4️⃣ Compartilhe com amigos e ganhe pontos!
+
+📊 **COMANDOS ÚTEIS:**
+• /meulink - Gerar seu link de convite
+• /ranking - Ver TOP 10 participantes
+• /competicao - Status da competição atual
+
+🏅 **PREMIAÇÃO:** TOP 10 participantes
+
+Boa sorte a todos! 🍀"""
+
+                await context.bot.send_message(
+                    chat_id=settings.CHAT_ID,
+                    text=channel_message
+                )
+                
+            except Exception as e:
+                logger.error(f"Erro ao enviar notificação no canal: {e}")
+            
             # Limpar dados da conversa
             context.user_data.clear()
             
@@ -388,6 +429,56 @@ Use /meulink para gerar novos links de convite.
                     f"✅ Competição \"{active_comp.name}\" finalizada com sucesso!\n\n"
                     "O ranking final será enviado no canal em breve. 🏆"
                 )
+                
+                # Enviar notificação no canal com ranking
+                try:
+                    from src.config.settings import settings
+                    
+                    # Obter ranking final
+                    ranking = self.db.get_competition_ranking(active_comp.id, limit=10)
+                    
+                    # Calcular estatísticas
+                    total_participants = len(ranking) if ranking else 0
+                    total_invites = sum(user.get('invites', 0) for user in ranking) if ranking else 0
+                    
+                    # Montar mensagem de ranking
+                    ranking_text = ""
+                    if ranking:
+                        for i, user in enumerate(ranking[:10], 1):
+                            medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}º"
+                            name = user.get('first_name', 'Usuário') or 'Usuário'
+                            invites = user.get('invites', 0)
+                            ranking_text += f"{medal} {name}: {invites} convites\n"
+                    else:
+                        ranking_text = "Nenhum participante registrado."
+                    
+                    channel_message = f"""🏁 **COMPETIÇÃO FINALIZADA!** 🏁
+
+🏆 **{active_comp.name}**
+📝 {active_comp.description or 'Competição encerrada!'}
+
+📊 **ESTATÍSTICAS FINAIS:**
+👥 Participantes: {total_participants}
+🎯 Total de convites: {total_invites:,}
+🏅 Meta: {active_comp.target_invites:,} convites
+
+🏆 **RANKING FINAL - TOP 10:**
+
+{ranking_text}
+
+🎉 **Parabéns a todos os participantes!**
+
+Obrigado por participarem desta competição incrível! 
+Fiquem atentos para as próximas competições! 🚀"""
+
+                    await context.bot.send_message(
+                        chat_id=settings.CHAT_ID,
+                        text=channel_message
+                    )
+                    
+                except Exception as e:
+                    logger.error(f"Erro ao enviar ranking no canal: {e}")
+                
             else:
                 await update.message.reply_text("❌ Erro ao finalizar competição.")
                 
