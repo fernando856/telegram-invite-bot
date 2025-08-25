@@ -134,6 +134,7 @@ Aguarde o próximo desafio! 🚀
             if existing_link:
                 # Usuário já tem link, mostrar o existente
                 invite_link = existing_link
+                link_status = "SEU LINK DE CONVITE!"
             else:
                 # Criar novo link
                 link_name = f"Link de {user.first_name or user.username or 'Usuário'} - {active_comp.name}"
@@ -149,6 +150,13 @@ Aguarde o próximo desafio! 🚀
                 if not invite_link:
                     await update.message.reply_text("❌ Erro ao gerar link de convite. Tente novamente.")
                     return
+                
+                link_status = "SEU LINK DE CONVITE GERADO!"
+            
+            # Verificar se invite_link é válido
+            if not invite_link or not hasattr(invite_link, 'invite_link'):
+                await update.message.reply_text("❌ Erro ao processar link de convite. Tente novamente.")
+                return
             
             # Adicionar usuário à competição
             self.comp_manager.add_participant(active_comp.id, user.id)
@@ -172,10 +180,23 @@ Aguarde o próximo desafio! 🚀
                     time_str = "Tempo esgotado!"
             except Exception:
                 time_str = "Calculando..."
-                
-            # Preparar mensagem com indicação se é link novo ou existente
-            link_status = "SEU LINK DE CONVITE!" if existing_link else "SEU LINK DE CONVITE GERADO!"
             
+            # Preparar dados com verificações seguras
+            max_uses = getattr(invite_link, 'max_uses', settings.MAX_INVITE_USES)
+            points_awarded = getattr(invite_link, 'points_awarded', 1)
+            
+            # Tratar data de expiração com segurança
+            expire_date_str = "Sem expiração"
+            try:
+                expire_date = getattr(invite_link, 'expire_date', None)
+                if expire_date:
+                    if isinstance(expire_date, str):
+                        expire_date_str = expire_date
+                    else:
+                        expire_date_str = expire_date.strftime('%d/%m/%Y')
+            except Exception:
+                expire_date_str = "Sem expiração"
+                
             message = f"""🔗 {link_status}
 
 🏆 Competição: {active_comp.name}
@@ -186,9 +207,9 @@ Seu link:
 {invite_link.invite_link}
 
 📊 Detalhes do link:
-• Máximo de usos: {invite_link.max_uses:,}
-• Válido até: {invite_link.expire_date if isinstance(invite_link.expire_date, str) else (invite_link.expire_date.strftime('%d/%m/%Y') if invite_link.expire_date else 'Sem expiração')}
-• Pontos por convite: {invite_link.points_awarded}
+• Máximo de usos: {max_uses:,}
+• Válido até: {expire_date_str}
+• Pontos por convite: {points_awarded}
 
 🚀 Como usar:
 1. Compartilhe este link com seus contatos
@@ -203,6 +224,8 @@ Boa sorte na competição! 🍀"""
             
         except Exception as e:
             logger.error(f"Erro no comando /meulink: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             await update.message.reply_text("❌ Erro ao gerar link de convite. Tente novamente.")
     
     async def my_invites(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
