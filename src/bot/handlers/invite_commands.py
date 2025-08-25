@@ -7,7 +7,7 @@ from telegram.ext import ContextTypes, CommandHandler
 from telegram.error import TelegramError
 
 from src.config.settings import settings
-from src.database.models import DatabaseManager
+from src.database.models import DatabaseManager, InviteLink
 from src.bot.services.competition_manager import CompetitionManager
 from src.bot.services.invite_manager import InviteManager
 from src.bot.services.auto_registration import AutoRegistrationService
@@ -170,8 +170,8 @@ Aguarde o próximo desafio! 🚀
             existing_link_data = self.link_reuse.get_or_create_user_link(user.id, active_comp.id)
             
             if existing_link_data:
-                # Reutilizar link existente
-                invite_link = InviteLink(**existing_link_data) if hasattr(InviteLink, '__init__') else existing_link_data
+                # Reutilizar link existente - usar dados diretamente
+                invite_link = existing_link_data
                 link_status = "SEU LINK DE CONVITE REUTILIZADO!"
                 logger.info(f"Reutilizando link existente para usuário {user.id}")
             else:
@@ -194,8 +194,24 @@ Aguarde o próximo desafio! 🚀
                 logger.info(f"Criado novo link para usuário {user.id}")
             
             # Verificar se invite_link é válido
-            if not invite_link or not hasattr(invite_link, 'invite_link'):
+            if not invite_link:
                 await update.message.reply_text("❌ Erro ao processar link de convite. Tente novamente.")
+                return
+            
+            # Obter URL do link (compatível com dict e objeto)
+            if isinstance(invite_link, dict):
+                link_url = invite_link.get('invite_link')
+                max_uses = invite_link.get('max_uses', 99999)
+                current_uses = invite_link.get('current_uses', 0)
+                expire_date = invite_link.get('expire_date')
+            else:
+                link_url = getattr(invite_link, 'invite_link', None)
+                max_uses = getattr(invite_link, 'max_uses', 99999)
+                current_uses = getattr(invite_link, 'current_uses', 0)
+                expire_date = getattr(invite_link, 'expire_date', None)
+            
+            if not link_url:
+                await update.message.reply_text("❌ Erro ao obter URL do link. Tente novamente.")
                 return
             
             # Adicionar usuário à competição
@@ -222,13 +238,11 @@ Aguarde o próximo desafio! 🚀
                 time_str = "Calculando..."
             
             # Preparar dados com verificações seguras
-            max_uses = settings.MAX_INVITE_USES  # Sempre usar valor das configurações
-            points_awarded = getattr(invite_link, 'points_awarded', 1)
+            points_awarded = 1  # Valor padrão
             
             # Tratar data de expiração com segurança e fuso horário de Brasília
             expire_date_str = "Sem expiração"
             try:
-                expire_date = getattr(invite_link, 'expire_date', None)
                 if expire_date:
                     if isinstance(expire_date, str):
                         # Tentar converter string para datetime
@@ -279,7 +293,7 @@ Aguarde o próximo desafio! 🚀
 🎯 Meta: {active_comp.target_invites:,} convidados
 
 Seu link:
-{invite_link.invite_link}
+{link_url}
 
 📊 Detalhes do link:
 • Máximo de usos: {max_uses:,}
