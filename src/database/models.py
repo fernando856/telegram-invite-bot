@@ -341,19 +341,20 @@ class DatabaseManager:
                 """, (user_id,)).fetchone()
             
             if row:
+                # Acesso seguro às colunas com valores padrão
                 return InviteLink(
-                    id=row['id'],
-                    user_id=row['user_id'],
-                    invite_link=row['invite_link'],
-                    name=row['name'],
-                    max_uses=row['max_uses'],
-                    current_uses=row['current_uses'],
-                    expire_date=row['expire_date'],
-                    is_active=row['is_active'],
-                    points_awarded=row['points_awarded'],
-                    competition_id=row['competition_id'],
-                    created_at=row['created_at'],
-                    updated_at=row['updated_at']
+                    id=row.get('id', 0),
+                    user_id=row.get('user_id', user_id),
+                    invite_link=row.get('invite_link', ''),
+                    name=row.get('name', ''),
+                    max_uses=row.get('max_uses', 10000),
+                    current_uses=row.get('current_uses', 0),  # Valor padrão se não existir
+                    expire_date=row.get('expire_date', None),
+                    is_active=row.get('is_active', True),
+                    points_awarded=row.get('points_awarded', 1),
+                    competition_id=row.get('competition_id', competition_id),
+                    created_at=row.get('created_at', ''),
+                    updated_at=row.get('updated_at', '')
                 )
             return None
 
