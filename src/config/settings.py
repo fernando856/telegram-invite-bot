@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     COMPETITION_TIMEZONE: str = "America/Sao_Paulo"
     COMPETITION_ANNOUNCEMENT_CHANNEL: Optional[int] = None
     
+    # PostgreSQL Configuration
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_DB: str = "telegram_bot"
+    POSTGRES_USER: str = "bot_user"
+    POSTGRES_PASSWORD: str = ""
+    
     # Web Interface
     WEB_PORT: int = 5000
     SECRET_KEY: str = "telegram_bot_secret_key_2025"

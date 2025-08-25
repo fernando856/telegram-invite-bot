@@ -54,6 +54,14 @@ async def main():
         logger.info(f"   • Porta web: {settings.WEB_PORT}")
         logger.info(f"   • Admins: {len(settings.admin_ids_list)} configurados")
         
+        # Exibir configurações PostgreSQL
+        logger.info(f"🐘 PostgreSQL:")
+        logger.info(f"   • Host: {settings.POSTGRES_HOST}")
+        logger.info(f"   • Port: {settings.POSTGRES_PORT}")
+        logger.info(f"   • Database: {settings.POSTGRES_DB}")
+        logger.info(f"   • User: {settings.POSTGRES_USER}")
+        logger.info(f"   • Password: {'*' * len(settings.POSTGRES_PASSWORD)}"))
+        
         # Iniciar bot
         await bot_manager.start()
         
