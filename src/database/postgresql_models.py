@@ -71,8 +71,8 @@ class PostgreSQLManager:
                 'host': os.getenv('POSTGRES_HOST', 'localhost'),
                 'port': os.getenv('POSTGRES_PORT', '5432'),
                 'database': os.getenv('POSTGRES_DB', 'telegram_bot'),
-                'user': os.getenv('POSTGRES_USER', 'postgres'),
-                'password': os.getenv('POSTGRES_PASSWORD', 'password'),
+                'user': os.getenv('POSTGRES_USER', 'bot_user'),
+                'password': os.getenv('POSTGRES_PASSWORD', '366260.Ff'),
             }
             
             # Criar pool de conexões
