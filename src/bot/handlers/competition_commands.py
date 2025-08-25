@@ -398,32 +398,28 @@ Use /meulink para gerar novos links de convite.
             
             if not active_comp:
                 await update.message.reply_text(
-                    "🔴 **Nenhuma competição ativa**\n\n"
-                    "Use /iniciar_competicao para criar uma nova.",
-                    parse_mode='Markdown'
+                    "🔴 Nenhuma competição ativa\n\n"
+                    "Use /iniciar_competicao para criar uma nova."
                 )
                 return
             
             # Informações básicas sem métodos complexos
-            message = f"""
-👑 **STATUS ADMINISTRATIVO**
+            message = f"""👑 STATUS ADMINISTRATIVO
 
-🏆 **Competição:** {active_comp.name}
-📝 **Descrição:** {active_comp.description or 'Sem descrição'}
-🎯 **Meta:** {active_comp.target_invites:,} convidados
-📊 **Status:** {active_comp.status}
+🏆 Competição: {active_comp.name}
+📝 Descrição: {active_comp.description or 'Sem descrição'}
+🎯 Meta: {active_comp.target_invites:,} convidados
+📊 Status: {active_comp.status}
 
-✅ **Sistema operacional**
-"""
+✅ Sistema operacional"""
             
-            await update.message.reply_text(message, parse_mode='Markdown')
+            await update.message.reply_text(message)
             
         except Exception as e:
             logger.error(f"Erro no status admin: {e}")
             await update.message.reply_text(
-                "🔴 **Nenhuma competição ativa**\n\n"
-                "Use /iniciar_competicao para criar uma nova.",
-                parse_mode='Markdown'
+                "🔴 Nenhuma competição ativa\n\n"
+                "Use /iniciar_competicao para criar uma nova."
             )
 
 def get_competition_handlers(db_manager: DatabaseManager, competition_manager: CompetitionManager):
