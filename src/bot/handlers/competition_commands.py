@@ -9,6 +9,7 @@ from telegram.error import TelegramError
 from src.config.settings import settings
 from src.database.models import DatabaseManager
 from src.bot.services.competition_manager import CompetitionManager
+from src.bot.utils.datetime_helper import calculate_time_remaining, format_time_remaining
 import logging
 
 logger = logging.getLogger(__name__)
@@ -69,13 +70,7 @@ class CompetitionHandlers:
             
             # Formatar tempo restante
             time_left = status['time_left']
-            if time_left.total_seconds() > 0:
-                days = time_left.days
-                hours, remainder = divmod(time_left.seconds, 3600)
-                minutes, _ = divmod(remainder, 60)
-                time_str = f"{days}d, {hours}h, {minutes}min"
-            else:
-                time_str = "Tempo esgotado!"
+            time_str = format_time_remaining(time_left)
             
             # Buscar líder atual
             top_3 = status['top_3']
@@ -145,7 +140,7 @@ class CompetitionHandlers:
             
             # Calcular tempo restante
             now = datetime.now(settings.timezone).replace(tzinfo=None)
-            time_left = active_comp.end_date - now if active_comp.end_date > now else timedelta(0)
+            time_left = calculate_time_remaining(active_comp.end_date, now)
             
             # Calcular projeção
             days_remaining = max(1, time_left.days)
@@ -203,15 +198,9 @@ Use /meulink para gerar novos links de convite.
             
             # Calcular tempo restante
             now = datetime.now(settings.timezone).replace(tzinfo=None)
-            time_left = active_comp.end_date - now if active_comp.end_date > now else timedelta(0)
+            time_left = calculate_time_remaining(active_comp.end_date, now)
             
-            if time_left.total_seconds() > 0:
-                days = time_left.days
-                hours, remainder = divmod(time_left.seconds, 3600)
-                minutes, _ = divmod(remainder, 60)
-                time_str = f"{days}d, {hours}h, {minutes}min"
-            else:
-                time_str = "Tempo esgotado!"
+            time_str = format_time_remaining(time_left)
             
             message = f"""
 🏆 **TOP 10 - {active_comp.name.upper()}**
