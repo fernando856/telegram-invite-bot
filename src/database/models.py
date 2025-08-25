@@ -319,4 +319,41 @@ class DatabaseManager:
                 'max_invites': 0,
                 'avg_invites': 0
             }
+    
+    def get_user_invite_link(self, user_id: int, competition_id: int = None):
+        """Busca link de convite existente do usuário para uma competição"""
+        with self.get_connection() as conn:
+            if competition_id:
+                # Buscar link específico para a competição
+                row = conn.execute("""
+                    SELECT * FROM invite_links
+                    WHERE user_id = ? AND competition_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                """, (user_id, competition_id)).fetchone()
+            else:
+                # Buscar último link do usuário
+                row = conn.execute("""
+                    SELECT * FROM invite_links
+                    WHERE user_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                """, (user_id,)).fetchone()
+            
+            if row:
+                return InviteLink(
+                    id=row['id'],
+                    user_id=row['user_id'],
+                    invite_link=row['invite_link'],
+                    name=row['name'],
+                    max_uses=row['max_uses'],
+                    current_uses=row['current_uses'],
+                    expire_date=row['expire_date'],
+                    is_active=row['is_active'],
+                    points_awarded=row['points_awarded'],
+                    competition_id=row['competition_id'],
+                    created_at=row['created_at'],
+                    updated_at=row['updated_at']
+                )
+            return None
 
