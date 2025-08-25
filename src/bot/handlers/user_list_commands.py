@@ -39,7 +39,9 @@ class UserListHandlers:
             except Exception as e:
                 logger.error(f"Erro ao obter informações do bot: {e}")
                 await update.message.reply_text(
-                    "🤖 Este comando só funciona no chat privado do bot!"
+                    "🤖 **Para usar comandos, acesse o bot no privado!**\n\n"
+                    "📱 **Procure por:** Porteiropalpite_bot\n"
+                    "✅ **Use o comando no chat privado!** 🚀"
                 )
             return False
         return True
