@@ -9,6 +9,7 @@ from telegram.error import TelegramError
 
 from src.config.settings import settings
 from src.database.models import DatabaseManager, Competition, CompetitionStatus, CompetitionParticipant
+from src.bot.utils.datetime_helper import safe_datetime_conversion
 import logging
 
 logger = logging.getLogger(__name__)
@@ -171,18 +172,9 @@ class CompetitionManager:
             ranking = self.db.get_competition_ranking(competition_id, limit=3)
             
             # Calcular tempo restante - versão robusta
-            time_left = timedelta(0)
-            try:
-                now = datetime.now()
-                if isinstance(competition.end_date, str):
-                    end_date = datetime.fromisoformat(competition.end_date.replace('Z', '+00:00'))
-                else:
-                    end_date = competition.end_date
-                
-                time_left = end_date - now if end_date > now else timedelta(0)
-            except Exception:
-                # Se não conseguir calcular, usar 0
-                pass
+            from src.bot.utils.datetime_helper import calculate_time_remaining
+            now = datetime.now()
+            time_left = calculate_time_remaining(competition.end_date, now)
             
             return {
                 'competition': competition,
@@ -209,7 +201,8 @@ class CompetitionManager:
                 return {'is_participant': False}
             
             # Calcular estatísticas adicionais
-            days_active = (datetime.now() - competition.start_date).days + 1
+            start_date = safe_datetime_conversion(competition.start_date)
+            days_active = (datetime.now() - start_date).days + 1
             avg_per_day = user_stats['invites_count'] / days_active if days_active > 0 else 0
             remaining_to_target = max(0, competition.target_invites - user_stats['invites_count'])
             
