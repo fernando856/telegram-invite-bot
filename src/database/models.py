@@ -350,12 +350,12 @@ class DatabaseManager:
                     user_id=row_dict.get('user_id', user_id),
                     invite_link=row_dict.get('invite_link', ''),
                     name=row_dict.get('name', ''),
+                    uses=row_dict.get('uses', 0),  # Usar 'uses' ao invés de 'current_uses'
                     max_uses=row_dict.get('max_uses', 10000),
-                    current_uses=row_dict.get('current_uses', 0),  # Valor padrão se não existir
                     expire_date=row_dict.get('expire_date', None),
-                    is_active=row_dict.get('is_active', True),
-                    points_awarded=row_dict.get('points_awarded', 1),
                     competition_id=row_dict.get('competition_id', competition_id),
+                    points_awarded=row_dict.get('points_awarded', 1),
+                    is_active=row_dict.get('is_active', True),
                     created_at=row_dict.get('created_at', ''),
                     updated_at=row_dict.get('updated_at', '')
                 )
