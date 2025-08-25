@@ -113,7 +113,7 @@ def main():
                             # Atualizar pontos
                             conn.execute("""
                                 UPDATE competition_participants 
-                                SET invites_count = ?, updated_at = CURRENT_TIMESTAMP
+                                SET invites_count = ?
                                 WHERE competition_id = ? AND user_id = ?
                             """, (uses, comp_id, user_id))
                             
