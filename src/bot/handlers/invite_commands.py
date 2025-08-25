@@ -182,7 +182,7 @@ Aguarde o próximo desafio! 🚀
                 time_str = "Calculando..."
             
             # Preparar dados com verificações seguras
-            max_uses = getattr(invite_link, 'max_uses', settings.MAX_INVITE_USES)
+            max_uses = settings.MAX_INVITE_USES  # Sempre usar valor das configurações
             points_awarded = getattr(invite_link, 'points_awarded', 1)
             
             # Tratar data de expiração com segurança e fuso horário de Brasília
