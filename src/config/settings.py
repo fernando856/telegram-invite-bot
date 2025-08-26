@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "telegram_bot_secret_key_2025"
     
     # Database
-    DATABASE_URL: str = "sqlite:///bot_database.db"
+    DATABASE_URL: str = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
     
     # System Settings
     LOG_LEVEL: str = "INFO"

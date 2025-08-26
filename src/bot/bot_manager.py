@@ -9,7 +9,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from telegram.error import TelegramError
 
 from src.config.settings import settings
-from src.database.models import DatabaseManager
+from src.database.postgresql_models import PostgreSQLManager
 from src.bot.services.competition_manager import CompetitionManager
 from src.bot.services.invite_manager import InviteManager
 from src.bot.services.tracking_monitor import TrackingMonitor
@@ -38,7 +38,7 @@ class BotManager:
         """Inicializa o bot e todos os componentes"""
         try:
             # Inicializar banco de dados
-            self.db_manager = DatabaseManager()
+            self.db_manager = PostgreSQLManager()
             logger.info("✅ Banco de dados inicializado")
             
             # Criar bot

@@ -16,44 +16,44 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class User:
-    id: int
-    user_id: int
+    id: Optional[int] = None
+    user_id: Optional[int] = None
     username: str
     first_name: str
     last_name: str
-    is_active: bool
-    created_at: str
-    updated_at: str
+    is_active: bool = True
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 @dataclass
 class Competition:
-    id: int
+    id: Optional[int] = None
     name: str
     description: str
     start_date: str
     end_date: str
     target_invites: int
     status: str
-    winner_user_id: int
-    total_participants: int
-    total_invites: int
-    created_at: str
-    updated_at: str
+    winner_user_id: Optional[int] = None
+    total_participants: int = 0
+    total_invites: int = 0
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 @dataclass
 class InviteLink:
-    id: int
-    user_id: int
+    id: Optional[int] = None
+    user_id: Optional[int] = None
     invite_link: str
     name: str
     max_uses: int
     current_uses: int
     expire_date: str
-    is_active: bool
+    is_active: bool = True
     points_awarded: int
-    competition_id: int
-    created_at: str
-    updated_at: str
+    competition_id: Optional[int] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 class PostgreSQLManager:
     """Gerenciador de banco de dados PostgreSQL"""
@@ -196,7 +196,7 @@ class PostgreSQLManager:
             conn.commit()
             logger.info("✅ Tabelas PostgreSQL criadas/verificadas")
     
-    def create_user(self, user_id: int, username: str = None, first_name: str = None, last_name: str = None) -> User:
+    def create_user(self, user_id: Optional[int] = None, username: str = None, first_name: str = None, last_name: str = None) -> User:
         """Cria ou atualiza usuário"""
         with self.get_connection() as conn:
             cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -216,7 +216,7 @@ class PostgreSQLManager:
             row = cursor.fetchone()
             return User(**dict(row))
     
-    def get_user(self, user_id: int) -> Optional[User]:
+    def get_user(self, user_id: Optional[int] = None) -> Optional[User]:
         """Busca usuário por ID"""
         with self.get_connection() as conn:
             cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -258,7 +258,7 @@ class PostgreSQLManager:
             row = cursor.fetchone()
             return Competition(**dict(row)) if row else None
     
-    def get_competition(self, competition_id: int) -> Optional[Competition]:
+    def get_competition(self, competition_id: Optional[int] = None) -> Optional[Competition]:
         """Busca competição por ID"""
         with self.get_connection() as conn:
             cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -268,7 +268,7 @@ class PostgreSQLManager:
             
             return Competition(**dict(row)) if row else None
     
-    def update_competition_status(self, competition_id: int, status: str) -> bool:
+    def update_competition_status(self, status: str, competition_id: Optional[int] = None) -> bool:
         """Atualiza status da competição"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -281,7 +281,7 @@ class PostgreSQLManager:
             
             return cursor.rowcount > 0
     
-    def add_competition_participant(self, competition_id: int, user_id: int) -> bool:
+    def add_competition_participant(self, competition_id: Optional[int] = None, user_id: int) -> bool:
         """Adiciona participante à competição"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -294,7 +294,7 @@ class PostgreSQLManager:
             
             return True
     
-    def get_competition_ranking(self, competition_id: int, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_competition_ranking(self, competition_id: Optional[int] = None, limit: int = 10) -> List[Dict[str, Any]]:
         """Busca ranking da competição"""
         with self.get_connection() as conn:
             cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -315,7 +315,7 @@ class PostgreSQLManager:
             
             return [dict(row) for row in cursor.fetchall()]
     
-    def get_user_competition_stats(self, competition_id: int, user_id: int) -> Optional[Dict[str, Any]]:
+    def get_user_competition_stats(self, competition_id: Optional[int] = None, user_id: int) -> Optional[Dict[str, Any]]:
         """Busca estatísticas do usuário na competição"""
         with self.get_connection() as conn:
             cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -337,7 +337,7 @@ class PostgreSQLManager:
             row = cursor.fetchone()
             return dict(row) if row else None
     
-    def update_participant_invites(self, competition_id: int, user_id: int, invites_count: int) -> bool:
+    def update_participant_invites(self, competition_id: Optional[int] = None, user_id: int, invites_count: int) -> bool:
         """Atualiza contador de convites do participante"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
@@ -350,7 +350,7 @@ class PostgreSQLManager:
             
             return cursor.rowcount > 0
     
-    def get_competition_stats(self, competition_id: int) -> Dict[str, Any]:
+    def get_competition_stats(self, competition_id: Optional[int] = None) -> Dict[str, Any]:
         """Busca estatísticas gerais da competição"""
         with self.get_connection() as conn:
             cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -373,7 +373,7 @@ class PostgreSQLManager:
                 'avg_invites': 0
             }
     
-    def get_user_invite_link(self, user_id: int, competition_id: int = None):
+    def get_user_invite_link(self, user_id: Optional[int] = None, competition_id: int = None):
         """Busca link de convite existente do usuário para uma competição"""
         with self.get_connection() as conn:
             cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -396,9 +396,9 @@ class PostgreSQLManager:
             row = cursor.fetchone()
             return InviteLink(**dict(row)) if row else None
     
-    def create_invite_link(self, user_id: int, invite_link: str, name: str, 
+    def create_invite_link(self, user_id: Optional[int] = None, invite_link: str, name: str, 
                           max_uses: int, expire_date: datetime, points_awarded: int = 1,
-                          competition_id: int = None) -> InviteLink:
+                          competition_id: Optional[int] = None = None) -> InviteLink:
         """Cria novo link de convite"""
         with self.get_connection() as conn:
             cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
