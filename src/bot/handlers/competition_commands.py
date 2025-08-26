@@ -35,15 +35,15 @@ class CompetitionHandlers:
                 bot_username = bot_info.username
                 
                 await update.message.reply_text(
-                    f"🤖 **Para usar comandos, acesse o bot no privado!**\n\n"
-                    f"👆 **Clique aqui:** @{bot_username}\n"
-                    f"📱 **Ou procure por:** {bot_username}\n\n"
-                    f"✅ **Depois use o comando no chat privado!** 🚀",
+                    f"🤖 *Para usar comandos, acesse o bot no privado!*\n\n"
+                    f"👆 *Clique aqui:* @{bot_username}\n"
+                    f"📱 *Ou procure por:* {bot_username}\n\n"
+                    f"✅ *Depois use o comando no chat privado!* 🚀",
                     parse_mode='Markdown'
                 )
             except Exception:
                 await update.message.reply_text(
-                    "🤖 **Para usar comandos, acesse o bot no privado!**\n\n"
+                    "🤖 *Para usar comandos, acesse o bot no privado!*\n\n"
                     "📱 **Procure por:** Porteiropalpite_bot\n"
                     "✅ **Use o comando no chat privado!** 🚀"
                 )
