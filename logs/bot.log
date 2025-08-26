@@ -1,0 +1,51 @@
+2025-08-25 17:13:33,380 - __main__ - INFO - ==================================================
+2025-08-25 17:13:33,380 - __main__ - INFO - 🤖 INICIANDO BOT DE RANKING DE CONVITES
+2025-08-25 17:13:33,380 - __main__ - INFO - ==================================================
+2025-08-25 17:13:33,380 - __main__ - INFO - 🔧 Configurações:
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Bot Token: 8258046975...
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Chat ID: -1002783437113
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Timezone: America/Sao_Paulo
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Duração da competição: 7 dias
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Meta da competição: 5,000 convidados
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Max usos por link: 100,000
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Validade dos links: 60 dias
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Porta web: 5000
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Admins: 3 configurados
+2025-08-25 17:13:33,381 - __main__ - INFO - 🐘 PostgreSQL:
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Host: localhost
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Port: 5432
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Database: telegram_bot
+2025-08-25 17:13:33,381 - __main__ - INFO -    • User: bot_user
+2025-08-25 17:13:33,381 - __main__ - INFO -    • Password: *********
+2025-08-25 17:13:33,383 - src.bot.bot_manager - INFO - ✅ Banco de dados inicializado
+2025-08-25 17:13:33,810 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/getMe "HTTP/1.1 200 OK"
+2025-08-25 17:13:33,810 - src.bot.bot_manager - INFO - ✅ Bot conectado: @Porteiropalpite_bot (Porteiro_Palpite)
+2025-08-25 17:13:33,900 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/getChat "HTTP/1.1 400 Bad Request"
+2025-08-25 17:13:33,901 - src.bot.bot_manager - WARNING - ⚠️ Canal não acessível: Chat not found
+2025-08-25 17:13:33,901 - src.bot.bot_manager - WARNING - ⚠️ Bot funcionará sem notificações no canal
+2025-08-25 17:13:33,901 - src.bot.bot_manager - WARNING - ⚠️ Verifique se o bot foi adicionado ao canal: -1002783437113
+2025-08-25 17:13:33,917 - src.bot.bot_manager - INFO - ✅ Gerenciadores inicializados
+2025-08-25 17:13:33,918 - src.bot.bot_manager - INFO - ✅ Todos os handlers registrados
+2025-08-25 17:13:33,918 - src.bot.bot_manager - INFO - ✅ Handlers registrados
+2025-08-25 17:13:33,918 - src.bot.bot_manager - INFO - ✅ Tarefas em background agendadas
+2025-08-25 17:13:33,919 - src.bot.bot_manager - INFO - ✅ Tarefas em background agendadas
+2025-08-25 17:13:33,919 - src.bot.bot_manager - INFO - 🎉 Bot inicializado com sucesso!
+2025-08-25 17:13:33,919 - src.bot.bot_manager - INFO - 🚀 Iniciando bot...
+2025-08-25 17:13:34,002 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/getMe "HTTP/1.1 200 OK"
+2025-08-25 17:13:34,003 - telegram.ext.Application - INFO - Application started
+2025-08-25 17:13:34,087 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/deleteWebhook "HTTP/1.1 200 OK"
+2025-08-25 17:13:34,088 - src.bot.bot_manager - INFO - ✅ Bot iniciado e rodando!
+2025-08-25 17:13:34,340 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/getUpdates "HTTP/1.1 200 OK"
+2025-08-25 17:13:34,347 - src.bot.handlers.competition_commands - ERROR - Erro no comando /ranking: '>' not supported between instances of 'str' and 'datetime.datetime'
+2025-08-25 17:13:34,459 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
+2025-08-25 17:13:34,580 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
+2025-08-25 17:13:34,719 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
+2025-08-25 17:13:34,861 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
+2025-08-25 17:13:34,981 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
+2025-08-25 17:13:35,122 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
+2025-08-25 17:13:35,275 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
+2025-08-25 17:13:40,279 - src.bot.bot_manager - ERROR - Erro ao lidar com mensagem desconhecida: Timed out
+2025-08-25 17:13:42,537 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
+2025-08-25 17:13:42,698 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
+2025-08-25 17:13:42,834 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
+2025-08-25 17:13:42,995 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
