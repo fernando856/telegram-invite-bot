@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Importar settings para configuração do banco
+from src.config.settings import settings
 
 Base = declarative_base()
 
@@ -67,7 +68,7 @@ class InvitedUser(Base):
 
 class PostgreSQLManager:
     def __init__(self):
-        self.engine = create_engine(DATABASE_URL)
+        self.engine = create_engine(settings.database_url)
         self.Session = sessionmaker(bind=self.engine)
         Base.metadata.create_all(self.engine)
 

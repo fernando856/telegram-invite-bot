@@ -33,9 +33,6 @@ class Settings(BaseSettings):
     WEB_PORT: int = 5000
     SECRET_KEY: str = "telegram_bot_secret_key_2025"
     
-    # Database
-    DATABASE_URL: str = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-    
     # System Settings
     LOG_LEVEL: str = "INFO"
     HEARTBEAT_INTERVAL: int = 30
@@ -77,6 +74,11 @@ class Settings(BaseSettings):
     def announcement_channel(self) -> int:
         """Retorna canal de anúncios ou canal principal"""
         return self.COMPETITION_ANNOUNCEMENT_CHANNEL or self.CHAT_ID
+    
+    @property
+    def database_url(self) -> str:
+        """Retorna URL do banco de dados PostgreSQL"""
+        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
 # Instância global das configurações
 settings = Settings()

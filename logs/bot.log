@@ -49,3 +49,96 @@
 2025-08-25 17:13:42,698 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
 2025-08-25 17:13:42,834 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
 2025-08-25 17:13:42,995 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAFKStyIxa9x8iGU4Q58vYR_urVMjs3oH1Q/sendMessage "HTTP/1.1 200 OK"
+2025-08-26 16:15:29,159 - __main__ - INFO - ==================================================
+2025-08-26 16:15:29,159 - __main__ - INFO - 🤖 INICIANDO BOT DE RANKING DE CONVITES
+2025-08-26 16:15:29,159 - __main__ - INFO - ==================================================
+2025-08-26 16:15:29,159 - __main__ - INFO - 🔧 Configurações:
+2025-08-26 16:15:29,159 - __main__ - INFO -    • Bot Token: 8258046975...
+2025-08-26 16:15:29,159 - __main__ - INFO -    • Chat ID: -1002370484206
+2025-08-26 16:15:29,159 - __main__ - INFO -    • Timezone: America/Sao_Paulo
+2025-08-26 16:15:29,159 - __main__ - INFO -    • Duração da competição: 7 dias
+2025-08-26 16:15:29,159 - __main__ - INFO -    • Meta da competição: 5,000 convidados
+2025-08-26 16:15:29,159 - __main__ - INFO -    • Max usos por link: 100,000
+2025-08-26 16:15:29,159 - __main__ - INFO -    • Validade dos links: 60 dias
+2025-08-26 16:15:29,159 - __main__ - INFO -    • Porta web: 5000
+2025-08-26 16:15:29,159 - __main__ - INFO -    • Admins: 3 configurados
+2025-08-26 16:15:29,160 - __main__ - INFO - 🐘 PostgreSQL:
+2025-08-26 16:15:29,160 - __main__ - INFO -    • Host: localhost
+2025-08-26 16:15:29,160 - __main__ - INFO -    • Port: 5432
+2025-08-26 16:15:29,160 - __main__ - INFO -    • Database: telegram_bot
+2025-08-26 16:15:29,160 - __main__ - INFO -    • User: bot_user
+2025-08-26 16:15:29,160 - __main__ - INFO -    • Password: *********
+2025-08-26 16:15:29,160 - src.bot.bot_manager - ERROR - ❌ Erro ao inicializar bot: Expected string or URL object, got None
+2025-08-26 16:15:29,160 - src.bot.bot_manager - ERROR - ❌ Erro ao iniciar bot: Falha na inicialização do bot
+2025-08-26 16:15:29,160 - src.bot.bot_manager - INFO - 🛑 Parando bot...
+2025-08-26 16:15:29,160 - src.bot.bot_manager - INFO - ✅ Bot parado com sucesso
+2025-08-26 16:15:29,160 - __main__ - ERROR - ❌ Erro fatal: Falha na inicialização do bot
+2025-08-26 16:15:29,160 - __main__ - INFO - 👋 Encerrando aplicação
+2025-08-26 16:16:24,652 - __main__ - INFO - ==================================================
+2025-08-26 16:16:24,652 - __main__ - INFO - 🤖 INICIANDO BOT DE RANKING DE CONVITES
+2025-08-26 16:16:24,652 - __main__ - INFO - ==================================================
+2025-08-26 16:16:24,652 - __main__ - INFO - 🔧 Configurações:
+2025-08-26 16:16:24,652 - __main__ - INFO -    • Bot Token: 8258046975...
+2025-08-26 16:16:24,652 - __main__ - INFO -    • Chat ID: -1002370484206
+2025-08-26 16:16:24,652 - __main__ - INFO -    • Timezone: America/Sao_Paulo
+2025-08-26 16:16:24,653 - __main__ - INFO -    • Duração da competição: 7 dias
+2025-08-26 16:16:24,653 - __main__ - INFO -    • Meta da competição: 5,000 convidados
+2025-08-26 16:16:24,653 - __main__ - INFO -    • Max usos por link: 100,000
+2025-08-26 16:16:24,653 - __main__ - INFO -    • Validade dos links: 60 dias
+2025-08-26 16:16:24,653 - __main__ - INFO -    • Porta web: 5000
+2025-08-26 16:16:24,653 - __main__ - INFO -    • Admins: 3 configurados
+2025-08-26 16:16:24,653 - __main__ - INFO - 🐘 PostgreSQL:
+2025-08-26 16:16:24,653 - __main__ - INFO -    • Host: localhost
+2025-08-26 16:16:24,653 - __main__ - INFO -    • Port: 5432
+2025-08-26 16:16:24,653 - __main__ - INFO -    • Database: telegram_bot
+2025-08-26 16:16:24,653 - __main__ - INFO -    • User: bot_user
+2025-08-26 16:16:24,653 - __main__ - INFO -    • Password: *********
+2025-08-26 16:16:24,762 - src.bot.bot_manager - ERROR - ❌ Erro ao inicializar bot: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-08-26 16:16:24,762 - src.bot.bot_manager - ERROR - ❌ Erro ao iniciar bot: Falha na inicialização do bot
+2025-08-26 16:16:24,762 - src.bot.bot_manager - INFO - 🛑 Parando bot...
+2025-08-26 16:16:24,762 - src.bot.bot_manager - INFO - ✅ Bot parado com sucesso
+2025-08-26 16:16:24,762 - __main__ - ERROR - ❌ Erro fatal: Falha na inicialização do bot
+2025-08-26 16:16:24,763 - __main__ - INFO - 👋 Encerrando aplicação
+2025-08-26 16:16:50,051 - __main__ - INFO - ==================================================
+2025-08-26 16:16:50,051 - __main__ - INFO - 🤖 INICIANDO BOT DE RANKING DE CONVITES
+2025-08-26 16:16:50,051 - __main__ - INFO - ==================================================
+2025-08-26 16:16:50,051 - __main__ - INFO - 🔧 Configurações:
+2025-08-26 16:16:50,051 - __main__ - INFO -    • Bot Token: 8258046975...
+2025-08-26 16:16:50,051 - __main__ - INFO -    • Chat ID: -1002370484206
+2025-08-26 16:16:50,051 - __main__ - INFO -    • Timezone: America/Sao_Paulo
+2025-08-26 16:16:50,051 - __main__ - INFO -    • Duração da competição: 7 dias
+2025-08-26 16:16:50,051 - __main__ - INFO -    • Meta da competição: 5,000 convidados
+2025-08-26 16:16:50,051 - __main__ - INFO -    • Max usos por link: 100,000
+2025-08-26 16:16:50,051 - __main__ - INFO -    • Validade dos links: 60 dias
+2025-08-26 16:16:50,051 - __main__ - INFO -    • Porta web: 5000
+2025-08-26 16:16:50,052 - __main__ - INFO -    • Admins: 3 configurados
+2025-08-26 16:16:50,052 - __main__ - INFO - 🐘 PostgreSQL:
+2025-08-26 16:16:50,052 - __main__ - INFO -    • Host: localhost
+2025-08-26 16:16:50,052 - __main__ - INFO -    • Port: 5432
+2025-08-26 16:16:50,052 - __main__ - INFO -    • Database: telegram_bot
+2025-08-26 16:16:50,052 - __main__ - INFO -    • User: bot_user
+2025-08-26 16:16:50,052 - __main__ - INFO -    • Password: *********
+2025-08-26 16:16:50,052 - src.bot.bot_manager - INFO - ✅ Banco de dados inicializado
+2025-08-26 16:16:50,431 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAEH7Oagi3RdHIjYbkXw3wrsusNBVDlR4yI/getMe "HTTP/1.1 200 OK"
+2025-08-26 16:16:50,432 - src.bot.bot_manager - INFO - ✅ Bot conectado: @Porteiropalpite_bot (Porteiro_Palpite)
+2025-08-26 16:16:50,656 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAEH7Oagi3RdHIjYbkXw3wrsusNBVDlR4yI/getChat "HTTP/1.1 200 OK"
+2025-08-26 16:16:50,657 - src.bot.bot_manager - INFO - ✅ Canal configurado: Palpiteemcasa Oficial (-1002370484206)
+2025-08-26 16:16:50,742 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAEH7Oagi3RdHIjYbkXw3wrsusNBVDlR4yI/getChatMember "HTTP/1.1 200 OK"
+2025-08-26 16:16:50,743 - src.bot.bot_manager - INFO - ✅ Bot é administrador do canal
+2025-08-26 16:16:50,751 - src.bot.bot_manager - INFO - ✅ Gerenciadores inicializados
+2025-08-26 16:16:50,752 - src.bot.bot_manager - INFO - ✅ Todos os handlers registrados
+2025-08-26 16:16:50,752 - src.bot.bot_manager - INFO - ✅ Handlers registrados
+2025-08-26 16:16:50,753 - src.bot.bot_manager - INFO - ✅ Tarefas em background agendadas
+2025-08-26 16:16:50,753 - src.bot.bot_manager - INFO - ✅ Tarefas em background agendadas
+2025-08-26 16:16:50,753 - src.bot.bot_manager - INFO - 🎉 Bot inicializado com sucesso!
+2025-08-26 16:16:50,753 - src.bot.bot_manager - INFO - 🚀 Iniciando bot...
+2025-08-26 16:16:50,836 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAEH7Oagi3RdHIjYbkXw3wrsusNBVDlR4yI/getMe "HTTP/1.1 200 OK"
+2025-08-26 16:16:50,837 - telegram.ext.Application - INFO - Application started
+2025-08-26 16:16:50,920 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAEH7Oagi3RdHIjYbkXw3wrsusNBVDlR4yI/deleteWebhook "HTTP/1.1 200 OK"
+2025-08-26 16:16:50,921 - src.bot.bot_manager - INFO - ✅ Bot iniciado e rodando!
+2025-08-26 16:17:01,184 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8258046975:AAEH7Oagi3RdHIjYbkXw3wrsusNBVDlR4yI/getUpdates "HTTP/1.1 200 OK"
