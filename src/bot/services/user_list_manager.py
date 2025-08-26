@@ -213,13 +213,8 @@ class UserListManager:
     def format_user_list_message(self, user_id: int, competition_id: int = None, limit: int = 20) -> str:
         """Formata lista de usuários para exibição no Telegram"""
         try:
-            # Importar aqui para evitar import circular
-            from src.database.invited_users_model import invited_users_manager
-            from src.bot.services.member_tracker import MemberTracker
-            
-            # Usar member_tracker para dados reais
-            member_tracker = MemberTracker(self.db)
-            invited_data = member_tracker.get_invited_users_for_display(user_id, competition_id)
+            # Buscar dados reais dos usuários convidados
+            invited_data = self._get_invited_users_data(user_id, competition_id)
             
             # Buscar nome do usuário
             with self.db.get_connection() as conn:
@@ -274,3 +269,111 @@ class UserListManager:
         except Exception as e:
             logger.error(f"Erro ao formatar lista de usuários: {e}")
             return "❌ **Erro ao buscar lista de usuários convidados.**\n\nTente novamente mais tarde."
+    
+    def _get_invited_users_data(self, user_id: int, competition_id: int = None) -> dict:
+        """Busca dados dos usuários convidados sem import circular"""
+        try:
+            # Verificar se existe tabela invited_users
+            with self.db.get_connection() as conn:
+                cursor = conn.execute("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name='invited_users'
+                """)
+                
+                if cursor.fetchone():
+                    # Usar dados reais da tabela invited_users
+                    if competition_id:
+                        cursor = conn.execute("""
+                            SELECT username, first_name, last_name, joined_at
+                            FROM invited_users 
+                            WHERE inviter_user_id = ? AND competition_id = ?
+                            ORDER BY joined_at DESC
+                        """, (user_id, competition_id))
+                    else:
+                        cursor = conn.execute("""
+                            SELECT username, first_name, last_name, joined_at
+                            FROM invited_users 
+                            WHERE inviter_user_id = ?
+                            ORDER BY joined_at DESC
+                        """, (user_id,))
+                    
+                    invited_users = cursor.fetchall()
+                    
+                    if invited_users:
+                        users_list = []
+                        for i, user in enumerate(invited_users, 1):
+                            # Formatar nome de exibição
+                            if user['username']:
+                                display_name = f"@{user['username']}"
+                            elif user['first_name'] or user['last_name']:
+                                full_name = f"{user['first_name'] or ''} {user['last_name'] or ''}".strip()
+                                display_name = full_name if full_name else f"Usuário {i}"
+                            else:
+                                display_name = f"Usuário {i}"
+                            
+                            # Formatar data
+                            joined_date = user['joined_at']
+                            if joined_date:
+                                try:
+                                    if isinstance(joined_date, str):
+                                        date_obj = datetime.fromisoformat(joined_date.replace('Z', '+00:00'))
+                                    else:
+                                        date_obj = joined_date
+                                    formatted_date = date_obj.strftime("%d/%m/%Y às %H:%M")
+                                    users_list.append(f"{i}. {display_name} - {formatted_date}")
+                                except:
+                                    users_list.append(f"{i}. {display_name}")
+                            else:
+                                users_list.append(f"{i}. {display_name}")
+                        
+                        return {
+                            'total_count': len(invited_users),
+                            'users_list': users_list,
+                            'has_real_data': True
+                        }
+                
+                # Fallback para estimativa baseada em usos dos links
+                return self._get_estimated_user_data(user_id, competition_id)
+                
+        except Exception as e:
+            logger.error(f"Erro ao buscar dados de usuários convidados: {e}")
+            return self._get_estimated_user_data(user_id, competition_id)
+    
+    def _get_estimated_user_data(self, user_id: int, competition_id: int = None) -> dict:
+        """Fallback para dados estimados baseados em usos dos links"""
+        try:
+            with self.db.get_connection() as conn:
+                if competition_id:
+                    cursor = conn.execute("""
+                        SELECT SUM(uses) as total_uses
+                        FROM invite_links 
+                        WHERE user_id = ? AND competition_id = ?
+                    """, (user_id, competition_id))
+                else:
+                    cursor = conn.execute("""
+                        SELECT SUM(uses) as total_uses
+                        FROM invite_links 
+                        WHERE user_id = ?
+                    """, (user_id,))
+                
+                result = cursor.fetchone()
+                total_uses = result['total_uses'] if result and result['total_uses'] else 0
+                
+                # Gerar lista estimada
+                users_list = []
+                for i in range(1, total_uses + 1):
+                    users_list.append(f"{i}. Usuário Convidado #{i} ⚡")
+                
+                return {
+                    'total_count': total_uses,
+                    'users_list': users_list,
+                    'has_real_data': False
+                }
+                
+        except Exception as e:
+            logger.error(f"Erro ao buscar dados estimados: {e}")
+            return {
+                'total_count': 0,
+                'users_list': [],
+                'has_real_data': False
+            }

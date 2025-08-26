@@ -15,6 +15,7 @@ from src.bot.services.invite_manager import InviteManager
 from src.bot.services.tracking_monitor import TrackingMonitor
 from src.bot.services.ranking_notifier import RankingNotifier
 from src.bot.services.member_tracker import MemberTracker
+from src.bot.services.safe_notifier import SafeNotifier
 from src.bot.handlers.competition_commands import get_competition_handlers
 from src.bot.handlers.invite_commands import get_invite_handlers
 from src.bot.handlers.user_list_commands import UserListHandlers
