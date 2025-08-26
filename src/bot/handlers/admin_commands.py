@@ -246,7 +246,7 @@ class AdminHandlers:
             # Obter saúde do sistema
             health = self.state_validator.get_system_health()
             
-            msg = "🏥 **VERIFICAÇÃO DE SAÚDE DO SISTEMA**\n\n"
+            msg = "🏥 *VERIFICAÇÃO DE SAÚDE DO SISTEMA*\n\n"
             
             # Status geral
             status_emoji = {
@@ -256,25 +256,25 @@ class AdminHandlers:
                 "error": "❌"
             }
             
-            msg += f"{status_emoji.get(health['overall_status'], '❓')} **Status Geral:** {health['overall_status'].upper()}\n\n"
+            msg += f"{status_emoji.get(health['overall_status'], '❓')} *Status Geral:* {health['overall_status'].upper()}\n\n"
             
             # Banco de dados
-            msg += f"🗄️ **Banco:** {health['database_status']}\n\n"
+            msg += f"🗄️ *Banco:* {health['database_status']}\n\n"
             
             # Competições
-            msg += "🏆 **Competições:**\n"
+            msg += "🏆 *Competições:*\n"
             for status, count in health['competitions'].items():
                 msg += f"• {status}: {count}\n"
             
             # Usuários
-            msg += f"\n👥 **Usuários:** {health['users'].get('total', 0):,}\n\n"
+            msg += f"\n👥 *Usuários:* {health['users'].get('total', 0):,}\n\n"
             
             # Links
-            msg += "🔗 **Links de Convite:**\n"
+            msg += "🔗 *Links de Convite:*\n"
             for status, count in health['links'].items():
                 msg += f"• {status}: {count}\n"
             
-            msg += f"\n🕐 **Verificação:** {health['timestamp']}"
+            msg += f"\n🕐 *Verificação:* {health['timestamp']}"
             
             await update.message.reply_text(msg, parse_mode='Markdown')
             
