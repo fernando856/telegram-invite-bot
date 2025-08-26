@@ -92,11 +92,11 @@ class InviteHandlers:
                 
                 message = f"""🎉 Bem-vindo ao Bot de Ranking de Convites!
 
-🏆 COMPETIÇÃO ATIVA: "{active_comp.name}"
+🏆 COMPETIÇÃO ATIVA: "{getattr(active_comp, 'name', 'Competição Ativa')}"
 {getattr(active_comp, 'description', '') or ''}
 
 ⏰ Tempo restante: {time_str}
-🎯 Meta: {active_comp.target_invites:,} convidados
+🎯 Meta: {getattr(active_comp, 'target_invites', 5000):,} convidados
 🏅 Premiação: Top 10 participantes
 
 🚀 Como participar:
@@ -289,9 +289,9 @@ Aguarde o próximo desafio! 🚀
                 
             message = f"""🔗 {link_status}
 
-🏆 Competição: {active_comp.name}
+🏆 Competição: {getattr(active_comp, "name", "Competição")}
 ⏰ Tempo restante: {time_str}
-🎯 Meta: {active_comp.target_invites:,} convidados
+🎯 Meta: {getattr(active_comp, 'target_invites', 5000):,} convidados
 
 Seu link:
 {link_url}
@@ -376,7 +376,7 @@ Boa sorte na competição! 🍀"""
                 user_perf = self.comp_manager.get_user_performance(active_comp.id, user.id)
                 if user_perf.get('is_participant'):
                     message += f"""
-🏆 **COMPETIÇÃO ATUAL: "{active_comp.name}"**
+🏆 **COMPETIÇÃO ATUAL: "{getattr(active_comp, "name", "Competição")}"**
 📊 Seus pontos: {user_perf['invites_count']:,}
 📍 Sua posição: #{user_perf['position']} de {user_perf['total_participants']:,}
 🎯 Faltam: {user_perf['remaining_to_target']:,} para a meta
@@ -427,7 +427,7 @@ Este bot permite gerar links únicos de convite e acompanhar quantas pessoas voc
             
             if active_comp:
                 message += f"""
-🏆 **COMPETIÇÃO ATIVA: "{active_comp.name}"**
+🏆 **COMPETIÇÃO ATIVA: "{getattr(active_comp, "name", "Competição")}"**
 Participe da competição e concorra a prêmios!
 
 📋 **Comandos da Competição:**
