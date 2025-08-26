@@ -693,12 +693,11 @@ def get_competition_handlers(db_manager: DatabaseManager, competition_manager: C
     )
     
     return [
-        # Comandos para usuários
+        # Comandos para usuários (APENAS PRIVADO)
         CommandHandler("competicao", handlers.competition_status),
         CommandHandler("meudesempenho", handlers.user_performance),
-        CommandHandler("ranking", handlers.competition_ranking),
         
-        # Comandos administrativos
+        # Comandos administrativos (APENAS PRIVADO)
         create_competition_handler,
         CommandHandler("finalizar_competicao", handlers.finish_competition_command),
         CommandHandler("status_admin", handlers.admin_status),

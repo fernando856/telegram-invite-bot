@@ -17,10 +17,12 @@ from src.bot.services.tracking_monitor import TrackingMonitor
 from src.bot.services.ranking_notifier import RankingNotifier
 from src.bot.services.member_tracker import MemberTracker
 from src.bot.services.safe_notifier import SafeNotifier
+from src.bot.services.channel_notifier import ChannelNotifier
 from src.bot.handlers.competition_commands import get_competition_handlers
 from src.bot.handlers.invite_commands import get_invite_handlers
 from src.bot.handlers.user_list_commands import UserListHandlers
 from src.bot.handlers.admin_commands import AdminHandlers
+from src.bot.handlers.ranking_commands import get_ranking_handler
 
 logger = logging.getLogger(__name__)
 
@@ -76,13 +78,12 @@ class BotManager:
             
             # Inicializar gerenciadores
             self.safe_notifier = SafeNotifier(self.bot)
-            self.competition_manager = CompetitionManager(self.db_manager, self.bot)
-            self.invite_manager = InviteManager(self.db_manager, self.bot)
-            self.ranking_notifier = RankingNotifier(self.db_manager, self.bot)
+            self.competition_manager = CompetitionManager(self.db_manager)
+            self.invite_manager = InviteManager(self.db_manager)
             self.tracking_monitor = TrackingMonitor(self.db_manager, self.bot)
             self.member_tracker = MemberTracker(self.db_manager)
-            logger.info("✅ Gerenciadores inicializados")
-            
+            self.channel_notifier = ChannelNotifier(self.bot)
+            logger.info("✅ Gerenciadores inicializados")    
             # Criar aplicação
             self.application = Application.builder().bot(self.bot).build()
             
@@ -123,6 +124,10 @@ class BotManager:
             admin_handlers = AdminHandlers(self.db_manager, self.competition_manager)
             for handler in admin_handlers.get_handlers():
                 self.application.add_handler(handler)
+            
+            # Handler de ranking (funciona no privado E no canal)
+            ranking_handler = get_ranking_handler(self.db_manager, self.competition_manager)
+            self.application.add_handler(ranking_handler)
             
             # Handler para novos membros (para rastrear convites)
             self.application.add_handler(
