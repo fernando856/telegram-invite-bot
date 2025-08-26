@@ -12,9 +12,9 @@ from src.config.settings import settings
 from src.database.models import DatabaseManager
 from src.bot.services.competition_manager import CompetitionManager
 from src.bot.services.invite_manager import InviteManager
-from src.bot.services.ranking_notifier import RankingNotifier
 from src.bot.services.tracking_monitor import TrackingMonitor
-from src.bot.services.safe_notifier import SafeNotifier
+from src.bot.services.ranking_notifier import RankingNotifier
+from src.bot.services.member_tracker import MemberTracker
 from src.bot.handlers.competition_commands import get_competition_handlers
 from src.bot.handlers.invite_commands import get_invite_handlers
 from src.bot.handlers.user_list_commands import UserListHandlers
@@ -28,9 +28,9 @@ class BotManager:
         self.db_manager = None
         self.competition_manager = None
         self.invite_manager = None
-        self.ranking_notifier = None
         self.tracking_monitor = None
-        self.safe_notifier = None
+        self.ranking_notifier = None
+        self.member_tracker = None
         self.is_running = False
         
     async def initialize(self):
@@ -71,6 +71,7 @@ class BotManager:
             self.invite_manager = InviteManager(self.db_manager, self.bot)
             self.ranking_notifier = RankingNotifier(self.db_manager, self.bot)
             self.tracking_monitor = TrackingMonitor(self.db_manager, self.bot)
+            self.member_tracker = MemberTracker(self.db_manager)
             logger.info("✅ Gerenciadores inicializados")
             
             # Criar aplicação
@@ -160,6 +161,10 @@ class BotManager:
                         
                         # Atualizar uso do link
                         await self.invite_manager.update_invite_link_usage(invite_link)
+                        
+                        # Rastrear novo membro com dados reais
+                        if self.member_tracker:
+                            await self.member_tracker.track_new_member(update, invite_link)
                         
                         # Registrar na competição se ativa
                         success = self.competition_manager.record_invite(user_id, invite_link)

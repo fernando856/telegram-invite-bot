@@ -213,10 +213,13 @@ class UserListManager:
     def format_user_list_message(self, user_id: int, competition_id: int = None, limit: int = 20) -> str:
         """Formata lista de usuários para exibição no Telegram"""
         try:
-            users = self.get_users_by_link(user_id, competition_id, limit)
+            # Importar aqui para evitar import circular
+            from src.database.invited_users_model import invited_users_manager
+            from src.bot.services.member_tracker import MemberTracker
             
-            if not users:
-                return "📭 Nenhum usuário entrou pelos seus links ainda.\n\nCompartilhe seus links para começar a ver resultados!"
+            # Usar member_tracker para dados reais
+            member_tracker = MemberTracker(self.db)
+            invited_data = member_tracker.get_invited_users_for_display(user_id, competition_id)
             
             # Buscar nome do usuário
             with self.db.get_connection() as conn:
@@ -240,38 +243,34 @@ class UserListManager:
                     if comp_info:
                         message += f"🏆 **Competição:** {comp_info['name']}\n\n"
             
-            message += f"📊 **Total de convites:** {len(users)}\n\n"
+            total_count = invited_data['total_count']
+            users_list = invited_data['users_list']
+            has_real_data = invited_data['has_real_data']
+            
+            if total_count == 0:
+                return message + "📭 **Nenhum usuário entrou pelos seus links ainda.**\n\n🚀 Compartilhe seus links para começar a ver resultados!"
+            
+            message += f"📊 **Total de convites:** {total_count}\n\n"
             message += "👤 **Lista de usuários:**\n"
             
-            for i, user in enumerate(users[:limit], 1):
-                name = user['name']
-                joined = user['joined_at']
-                
-                if user.get('simulated'):
-                    message += f"{i}. {name} ⚡\n"
-                else:
-                    if joined and joined != "Data não disponível":
-                        try:
-                            # Tentar formatar data
-                            if isinstance(joined, str):
-                                date_str = joined.split(' ')[0]  # Pegar apenas a data
-                            else:
-                                date_str = joined.strftime('%d/%m/%Y')
-                            message += f"{i}. {name} - {date_str}\n"
-                        except:
-                            message += f"{i}. {name}\n"
-                    else:
-                        message += f"{i}. {name}\n"
+            # Mostrar lista (limitada)
+            for i, user_entry in enumerate(users_list[:limit], 1):
+                message += f"{user_entry}\n"
             
-            if len(users) > limit:
-                message += f"\n... e mais {len(users) - limit} usuários\n"
+            # Indicar se há mais usuários
+            if total_count > limit:
+                message += f"\n... e mais {total_count - limit} usuários\n"
             
-            message += "\n⚡ = Dados baseados em estatísticas de uso dos links"
+            # Adicionar nota sobre fonte dos dados
+            if has_real_data:
+                message += "\n✅ **Dados reais** dos usuários que entraram pelos seus links"
+            else:
+                message += "\n⚡ **Dados baseados** em estatísticas de uso dos links"
+            
             message += "\n\n🚀 **Continue compartilhando seus links para crescer sua lista!**"
             
             return message
             
         except Exception as e:
-            logger.error(f"❌ Erro ao formatar lista de usuários: {e}")
-            return "❌ Erro ao carregar lista de usuários. Tente novamente."
-
+            logger.error(f"Erro ao formatar lista de usuários: {e}")
+            return "❌ **Erro ao buscar lista de usuários convidados.**\n\nTente novamente mais tarde."
