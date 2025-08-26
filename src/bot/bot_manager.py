@@ -192,9 +192,14 @@ class BotManager:
             logger.error(f"Erro ao processar novo membro: {e}")
     
     async def _handle_unknown_message(self, update, context):
-        """Lida com mensagens não reconhecidas"""
+        """Lida com mensagens não reconhecidas - apenas no privado"""
         try:
-            # Resposta amigável para mensagens não reconhecidas
+            # Verificar se é chat privado
+            if update.message.chat.type != 'private':
+                # No canal/grupo, ignorar mensagens não reconhecidas
+                return
+            
+            # Resposta amigável apenas para mensagens no privado
             await update.message.reply_text(
                 "🤖 Não entendi essa mensagem.\n\n"
                 "Use /help para ver todos os comandos disponíveis! 📋",
