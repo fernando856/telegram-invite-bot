@@ -20,6 +20,7 @@ from src.bot.services.safe_notifier import SafeNotifier
 from src.bot.handlers.competition_commands import get_competition_handlers
 from src.bot.handlers.invite_commands import get_invite_handlers
 from src.bot.handlers.user_list_commands import UserListHandlers
+from src.bot.handlers.admin_commands import AdminHandlers
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,11 @@ class BotManager:
             # Handlers de lista de usuários
             user_list_handlers = UserListHandlers(self.db_manager, self.competition_manager)
             for handler in user_list_handlers.get_handlers():
+                self.application.add_handler(handler)
+            
+            # Handlers administrativos
+            admin_handlers = AdminHandlers(self.db_manager, self.competition_manager)
+            for handler in admin_handlers.get_handlers():
                 self.application.add_handler(handler)
             
             # Handler para novos membros (para rastrear convites)
