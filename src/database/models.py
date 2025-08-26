@@ -1,11 +1,14 @@
 """
-Modelos do banco de dados para o Bot de Ranking de Convites com Sistema de Competição
+Sistema de Banco de Dados - Telegram Invite Bot
 """
 import sqlite3
+import logging
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 class CompetitionStatus(Enum):
     INACTIVE = "inactive"
@@ -360,4 +363,41 @@ class DatabaseManager:
                     updated_at=row_dict.get('updated_at', '')
                 )
             return None
+
+    def get_competition_participants(self, competition_id: int) -> List[CompetitionParticipant]:
+        """Obtém participantes da competição ordenados por número de convites"""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT 
+                    cp.user_id,
+                    cp.competition_id,
+                    cp.invites_count,
+                    cp.points,
+                    cp.joined_at,
+                    u.name,
+                    u.username,
+                    u.first_name
+                FROM competition_participants cp
+                LEFT JOIN users u ON cp.user_id = u.id
+                WHERE cp.competition_id = ?
+                ORDER BY cp.invites_count DESC, cp.joined_at ASC
+            """, (competition_id,))
+            
+            participants = []
+            for row in cursor.fetchall():
+                participant = CompetitionParticipant(
+                    user_id=row[0],
+                    competition_id=row[1],
+                    invites_count=row[2],
+                    points=row[3],
+                    joined_at=row[4]
+                )
+                participants.append(participant)
+            
+            return participants
+            
+        except Exception as e:
+            logger.error(f"Erro ao buscar participantes da competição {competition_id}: {e}")
+            return []
 

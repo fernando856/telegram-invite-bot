@@ -419,3 +419,41 @@ Aguardem o ranking final! 🏁
         except TelegramError as e:
             logger.error(f"Erro ao lidar com meta atingida: {e}")
 
+    def get_competition_ranking(self, competition_id: int, limit: int = 10) -> List[Dict[str, Any]]:
+        """Obtém o ranking da competição"""
+        try:
+            logger.info(f"Buscando ranking da competição {competition_id} (limit: {limit})")
+            
+            # Buscar participantes da competição ordenados por convites
+            participants = self.db.get_competition_participants(competition_id)
+            
+            if not participants:
+                logger.info(f"Nenhum participante encontrado para competição {competition_id}")
+                return []
+            
+            # Converter para formato de ranking
+            ranking = []
+            for participant in participants[:limit]:
+                try:
+                    user = self.db.get_user(participant.user_id)
+                    user_name = user.name if user else f"Usuário {participant.user_id}"
+                    
+                    ranking_item = {
+                        'user_id': participant.user_id,
+                        'user_name': user_name,
+                        'invites_count': participant.invites_count,
+                        'position': len(ranking) + 1
+                    }
+                    ranking.append(ranking_item)
+                    
+                except Exception as e:
+                    logger.error(f"Erro ao processar participante {participant.user_id}: {e}")
+                    continue
+            
+            logger.info(f"Ranking obtido com {len(ranking)} participantes")
+            return ranking
+            
+        except Exception as e:
+            logger.error(f"Erro ao obter ranking da competição {competition_id}: {e}")
+            return []
+
