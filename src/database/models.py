@@ -375,9 +375,8 @@ class DatabaseManager:
                     cp.invites_count,
                     cp.points,
                     cp.joined_at,
-                    u.name,
-                    u.username,
-                    u.first_name
+                    u.first_name,
+                    u.username
                 FROM competition_participants cp
                 LEFT JOIN users u ON cp.user_id = u.id
                 WHERE cp.competition_id = ?

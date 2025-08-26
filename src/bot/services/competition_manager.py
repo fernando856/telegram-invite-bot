@@ -436,7 +436,8 @@ Aguardem o ranking final! 🏁
             for participant in participants[:limit]:
                 try:
                     user = self.db.get_user(participant.user_id)
-                    user_name = user.name if user else f"Usuário {participant.user_id}"
+                    # Usar first_name ao invés de name (que não existe)
+                    user_name = getattr(user, 'first_name', None) or getattr(user, 'username', None) or f"Usuário {participant.user_id}"
                     
                     ranking_item = {
                         'user_id': participant.user_id,
