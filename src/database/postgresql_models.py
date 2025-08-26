@@ -1,421 +1,232 @@
-"""
-Modelos de banco de dados PostgreSQL para o bot de ranking de convites
-"""
-
-import psycopg2
-import psycopg2.extras
-from psycopg2.pool import ThreadedConnectionPool
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, ForeignKey, BigInteger, UniqueConstraint
+from sqlalchemy.orm import sessionmaker, relationship, declarative_base
+from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
-import logging
-from dataclasses import dataclass
-from contextlib import contextmanager
+from typing import List, Optional, Dict, Any
 import os
+from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
+load_dotenv()
 
-@dataclass
-class User:
-    id: Optional[int] = None
-    user_id: Optional[int] = None
-    username: str
-    first_name: str
-    last_name: str
-    is_active: bool = True
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-@dataclass
-class Competition:
-    id: Optional[int] = None
-    name: str
-    description: str
-    start_date: str
-    end_date: str
-    target_invites: int
-    status: str
-    winner_user_id: Optional[int] = None
-    total_participants: int = 0
-    total_invites: int = 0
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+Base = declarative_base()
 
-@dataclass
-class InviteLink:
-    id: Optional[int] = None
-    user_id: Optional[int] = None
-    invite_link: str
-    name: str
-    max_uses: int
-    current_uses: int
-    expire_date: str
-    is_active: bool = True
-    points_awarded: int
-    competition_id: Optional[int] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(BigInteger, primary_key=True)
+    username = Column(String, nullable=True)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+class Competition(Base):
+    __tablename__ = 'competitions'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    start_date = Column(DateTime, default=datetime.now)
+    end_date = Column(DateTime, nullable=True)
+    status = Column(String, default='inactive')
+    winner_user_id = Column(BigInteger, nullable=True)
+    total_participants = Column(Integer, default=0)
+    total_invites = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+class CompetitionParticipant(Base):
+    __tablename__ = 'competition_participants'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    competition_id = Column(Integer, ForeignKey('competitions.id'), nullable=False)
+    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
+    invites_count = Column(Integer, default=0)
+    last_invite_at = Column(DateTime, nullable=True)
+    __table_args__ = (UniqueConstraint('competition_id', 'user_id', name='_competition_user_uc'),)
+
+class InviteLink(Base):
+    __tablename__ = 'invite_links'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
+    competition_id = Column(Integer, ForeignKey('competitions.id'), nullable=False)
+    invite_link = Column(String, unique=True, nullable=False)
+    name = Column(String)
+    uses = Column(Integer, default=0)
+    max_uses = Column(Integer, default=-1)
+    expire_date = Column(DateTime)
+    points_awarded = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.now)
+
+class InvitedUser(Base):
+    __tablename__ = 'invited_users'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    invited_by_user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
+    invited_user_id = Column(BigInteger, ForeignKey('users.id'), unique=True, nullable=False)
+    competition_id = Column(Integer, ForeignKey('competitions.id'), nullable=False)
+    invite_link_id = Column(Integer, ForeignKey('invite_links.id'), nullable=False)
+    joined_at = Column(DateTime, default=datetime.now)
 
 class PostgreSQLManager:
-    """Gerenciador de banco de dados PostgreSQL"""
-    
     def __init__(self):
-        self.connection_pool = None
-        self._initialize_connection_pool()
-        self._create_tables()
-    
-    def _initialize_connection_pool(self):
-        """Inicializa pool de conexões PostgreSQL"""
-        try:
-            # Configurações de conexão
-            db_config = {
-                'host': os.getenv('POSTGRES_HOST', 'localhost'),
-                'port': os.getenv('POSTGRES_PORT', '5432'),
-                'database': os.getenv('POSTGRES_DB', 'telegram_bot'),
-                'user': os.getenv('POSTGRES_USER', 'bot_user'),
-                'password': os.getenv('POSTGRES_PASSWORD', '366260.Ff'),
-            }
-            
-            # Criar pool de conexões
-            self.connection_pool = ThreadedConnectionPool(
-                minconn=1,
-                maxconn=20,
-                **db_config
-            )
-            
-            logger.info("✅ Pool de conexões PostgreSQL inicializado")
-            
-        except Exception as e:
-            logger.error(f"❌ Erro ao conectar PostgreSQL: {e}")
-            raise
-    
-    @contextmanager
-    def get_connection(self):
-        """Context manager para conexões do pool"""
-        conn = None
-        try:
-            conn = self.connection_pool.getconn()
-            conn.autocommit = True
-            yield conn
-        except Exception as e:
-            if conn:
-                conn.rollback()
-            logger.error(f"Erro na conexão PostgreSQL: {e}")
-            raise
-        finally:
-            if conn:
-                self.connection_pool.putconn(conn)
-    
-    def _create_tables(self):
-        """Cria tabelas necessárias"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            # Tabela de usuários
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id SERIAL PRIMARY KEY,
-                    user_id BIGINT UNIQUE NOT NULL,
-                    username VARCHAR(255),
-                    first_name VARCHAR(255),
-                    last_name VARCHAR(255),
-                    is_active BOOLEAN DEFAULT TRUE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
-            # Tabela de competições
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS competitions (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(255) NOT NULL,
-                    description TEXT,
-                    start_date TIMESTAMP NOT NULL,
-                    end_date TIMESTAMP NOT NULL,
-                    target_invites INTEGER NOT NULL,
-                    status VARCHAR(50) DEFAULT 'preparation',
-                    winner_user_id BIGINT,
-                    total_participants INTEGER DEFAULT 0,
-                    total_invites INTEGER DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
-            # Tabela de participantes da competição
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS competition_participants (
-                    id SERIAL PRIMARY KEY,
-                    competition_id INTEGER REFERENCES competitions(id) ON DELETE CASCADE,
-                    user_id BIGINT NOT NULL,
-                    invites_count INTEGER DEFAULT 0,
-                    position INTEGER,
-                    last_invite_at TIMESTAMP,
-                    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(competition_id, user_id)
-                )
-            """)
-            
-            # Tabela de links de convite
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS invite_links (
-                    id SERIAL PRIMARY KEY,
-                    user_id BIGINT NOT NULL,
-                    invite_link VARCHAR(500) UNIQUE NOT NULL,
-                    name VARCHAR(255),
-                    max_uses INTEGER DEFAULT 10000,
-                    current_uses INTEGER DEFAULT 0,
-                    expire_date TIMESTAMP,
-                    is_active BOOLEAN DEFAULT TRUE,
-                    points_awarded INTEGER DEFAULT 1,
-                    competition_id INTEGER REFERENCES competitions(id) ON DELETE SET NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
-            # Tabela de convites realizados
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS invites (
-                    id SERIAL PRIMARY KEY,
-                    invite_link_id INTEGER REFERENCES invite_links(id) ON DELETE CASCADE,
-                    invited_user_id BIGINT NOT NULL,
-                    competition_id INTEGER REFERENCES competitions(id) ON DELETE SET NULL,
-                    points_earned INTEGER DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            
-            # Índices para performance
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_user_id ON users(user_id)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_competitions_status ON competitions(status)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_competition_participants_comp_user ON competition_participants(competition_id, user_id)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_invite_links_user_comp ON invite_links(user_id, competition_id)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_invites_link_comp ON invites(invite_link_id, competition_id)")
-            
-            conn.commit()
-            logger.info("✅ Tabelas PostgreSQL criadas/verificadas")
-    
-    def create_user(self, user_id: Optional[int] = None, username: str = None, first_name: str = None, last_name: str = None) -> User:
-        """Cria ou atualiza usuário"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("""
-                INSERT INTO users (user_id, username, first_name, last_name, updated_at)
-                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
-                ON CONFLICT (user_id) 
-                DO UPDATE SET 
-                    username = EXCLUDED.username,
-                    first_name = EXCLUDED.first_name,
-                    last_name = EXCLUDED.last_name,
-                    updated_at = CURRENT_TIMESTAMP
-                RETURNING *
-            """, (user_id, username, first_name, last_name))
-            
-            row = cursor.fetchone()
-            return User(**dict(row))
-    
-    def get_user(self, user_id: Optional[int] = None) -> Optional[User]:
-        """Busca usuário por ID"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
-            row = cursor.fetchone()
-            
-            return User(**dict(row)) if row else None
-    
-    def create_competition(self, name: str, description: str, start_date: datetime, 
-                          duration_days: int, target_invites: int) -> Competition:
-        """Cria nova competição"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            end_date = start_date + timedelta(days=duration_days)
-            
-            cursor.execute("""
-                INSERT INTO competitions (name, description, start_date, end_date, target_invites, status)
-                VALUES (%s, %s, %s, %s, %s, 'preparation')
-                RETURNING *
-            """, (name, description, start_date, end_date, target_invites))
-            
-            row = cursor.fetchone()
-            return Competition(**dict(row))
-    
-    def get_active_competition(self) -> Optional[Competition]:
-        """Busca competição ativa"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("""
-                SELECT * FROM competitions 
-                WHERE status IN ('active', 'preparation')
-                ORDER BY created_at DESC 
-                LIMIT 1
-            """)
-            
-            row = cursor.fetchone()
-            return Competition(**dict(row)) if row else None
-    
-    def get_competition(self, competition_id: Optional[int] = None) -> Optional[Competition]:
-        """Busca competição por ID"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("SELECT * FROM competitions WHERE id = %s", (competition_id,))
-            row = cursor.fetchone()
-            
-            return Competition(**dict(row)) if row else None
-    
-    def update_competition_status(self, status: str, competition_id: Optional[int] = None) -> bool:
-        """Atualiza status da competição"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                UPDATE competitions 
-                SET status = %s, updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-            """, (status, competition_id))
-            
-            return cursor.rowcount > 0
-    
-    def add_competition_participant(self, competition_id: Optional[int] = None, user_id: int) -> bool:
-        """Adiciona participante à competição"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                INSERT INTO competition_participants (competition_id, user_id)
-                VALUES (%s, %s)
-                ON CONFLICT (competition_id, user_id) DO NOTHING
-            """, (competition_id, user_id))
-            
-            return True
-    
-    def get_competition_ranking(self, competition_id: Optional[int] = None, limit: int = 10) -> List[Dict[str, Any]]:
-        """Busca ranking da competição"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("""
-                SELECT 
-                    cp.user_id,
-                    u.first_name,
-                    u.username,
-                    cp.invites_count,
-                    ROW_NUMBER() OVER (ORDER BY cp.invites_count DESC, cp.last_invite_at ASC) as position
-                FROM competition_participants cp
-                JOIN users u ON cp.user_id = u.user_id
-                WHERE cp.competition_id = %s AND cp.invites_count > 0
-                ORDER BY cp.invites_count DESC, cp.last_invite_at ASC
-                LIMIT %s
-            """, (competition_id, limit))
-            
-            return [dict(row) for row in cursor.fetchall()]
-    
-    def get_user_competition_stats(self, competition_id: Optional[int] = None, user_id: int) -> Optional[Dict[str, Any]]:
-        """Busca estatísticas do usuário na competição"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("""
-                SELECT 
-                    cp.invites_count,
-                    cp.last_invite_at,
-                    (SELECT COUNT(*) + 1 FROM competition_participants cp2 
-                     WHERE cp2.competition_id = cp.competition_id 
-                     AND cp2.invites_count > cp.invites_count) as position,
-                    (SELECT COUNT(*) FROM competition_participants cp3 
-                     WHERE cp3.competition_id = cp.competition_id 
-                     AND cp3.invites_count > 0) as total_participants
-                FROM competition_participants cp
-                WHERE cp.competition_id = %s AND cp.user_id = %s
-            """, (competition_id, user_id))
-            
-            row = cursor.fetchone()
-            return dict(row) if row else None
-    
-    def update_participant_invites(self, competition_id: Optional[int] = None, user_id: int, invites_count: int) -> bool:
-        """Atualiza contador de convites do participante"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                UPDATE competition_participants 
-                SET invites_count = %s, last_invite_at = CURRENT_TIMESTAMP
-                WHERE competition_id = %s AND user_id = %s
-            """, (invites_count, competition_id, user_id))
-            
-            return cursor.rowcount > 0
-    
-    def get_competition_stats(self, competition_id: Optional[int] = None) -> Dict[str, Any]:
-        """Busca estatísticas gerais da competição"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("""
-                SELECT 
-                    COUNT(*) as total_participants,
-                    COALESCE(SUM(invites_count), 0) as total_invites,
-                    COALESCE(MAX(invites_count), 0) as max_invites,
-                    COALESCE(AVG(invites_count), 0) as avg_invites
-                FROM competition_participants
-                WHERE competition_id = %s
-            """, (competition_id,))
-            
-            row = cursor.fetchone()
-            return dict(row) if row else {
-                'total_participants': 0,
-                'total_invites': 0,
-                'max_invites': 0,
-                'avg_invites': 0
-            }
-    
-    def get_user_invite_link(self, user_id: Optional[int] = None, competition_id: int = None):
-        """Busca link de convite existente do usuário para uma competição"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            if competition_id:
-                cursor.execute("""
-                    SELECT * FROM invite_links
-                    WHERE user_id = %s AND competition_id = %s
-                    ORDER BY created_at DESC
-                    LIMIT 1
-                """, (user_id, competition_id))
-            else:
-                cursor.execute("""
-                    SELECT * FROM invite_links
-                    WHERE user_id = %s
-                    ORDER BY created_at DESC
-                    LIMIT 1
-                """, (user_id,))
-            
-            row = cursor.fetchone()
-            return InviteLink(**dict(row)) if row else None
-    
-    def create_invite_link(self, user_id: Optional[int] = None, invite_link: str, name: str, 
-                          max_uses: int, expire_date: datetime, points_awarded: int = 1,
-                          competition_id: Optional[int] = None = None) -> InviteLink:
-        """Cria novo link de convite"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            
-            cursor.execute("""
-                INSERT INTO invite_links 
-                (user_id, invite_link, name, max_uses, expire_date, points_awarded, competition_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                RETURNING *
-            """, (user_id, invite_link, name, max_uses, expire_date, points_awarded, competition_id))
-            
-            row = cursor.fetchone()
-            return InviteLink(**dict(row))
-    
-    def close(self):
-        """Fecha pool de conexões"""
-        if self.connection_pool:
-            self.connection_pool.closeall()
-            logger.info("Pool de conexões PostgreSQL fechado")
+        self.engine = create_engine(DATABASE_URL)
+        self.Session = sessionmaker(bind=self.engine)
+        Base.metadata.create_all(self.engine)
 
+    def get_active_competition(self) -> Optional[Competition]:
+        session = self.Session()
+        try:
+            return session.query(Competition).filter_by(status='active').first()
+        finally:
+            session.close()
+
+    def create_user(self, user_id: int, username: Optional[str] = None, first_name: Optional[str] = None, last_name: Optional[str] = None) -> User:
+        session = self.Session()
+        try:
+            user = session.query(User).filter_by(id=user_id).first()
+            if not user:
+                user = User(id=user_id, username=username, first_name=first_name, last_name=last_name)
+                session.add(user)
+                session.commit()
+            return user
+        finally:
+            session.close()
+
+    def add_competition_participant(self, user_id: int, competition_id: int) -> bool:
+        session = self.Session()
+        try:
+            participant = session.query(CompetitionParticipant).filter_by(user_id=user_id, competition_id=competition_id).first()
+            if not participant:
+                new_participant = CompetitionParticipant(user_id=user_id, competition_id=competition_id)
+                session.add(new_participant)
+                session.commit()
+            return True
+        except SQLAlchemyError:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+    def get_competition_ranking(self, competition_id: int, limit: int = 10) -> List[Dict[str, Any]]:
+        session = self.Session()
+        try:
+            ranking = (
+                session.query(User.username, User.first_name, CompetitionParticipant.invites_count)
+                .join(CompetitionParticipant, User.id == CompetitionParticipant.user_id)
+                .filter(CompetitionParticipant.competition_id == competition_id)
+                .order_by(CompetitionParticipant.invites_count.desc())
+                .limit(limit)
+                .all()
+            )
+            return [{"username": r.username, "first_name": r.first_name, "invites": r.invites_count} for r in ranking]
+        finally:
+            session.close()
+
+    def update_participant_invites(self, user_id: int, competition_id: int, invites_count: int) -> bool:
+        session = self.Session()
+        try:
+            participant = session.query(CompetitionParticipant).filter_by(user_id=user_id, competition_id=competition_id).first()
+            if participant:
+                participant.invites_count = invites_count
+                participant.last_invite_at = datetime.now()
+                session.commit()
+                return True
+            return False
+        except SQLAlchemyError:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+    def get_user_invite_link(self, user_id: int, competition_id: int) -> Optional[InviteLink]:
+        session = self.Session()
+        try:
+            return session.query(InviteLink).filter_by(user_id=user_id, competition_id=competition_id).first()
+        finally:
+            session.close()
+
+    def create_invite_link(self, user_id: int, competition_id: int, invite_link: str, name: str, max_uses: int = -1, expire_date: Optional[datetime] = None, points_awarded: int = 1) -> InviteLink:
+        session = self.Session()
+        try:
+            new_link = InviteLink(
+                user_id=user_id,
+                competition_id=competition_id,
+                invite_link=invite_link,
+                name=name,
+                max_uses=max_uses,
+                expire_date=expire_date,
+                points_awarded=points_awarded
+            )
+            session.add(new_link)
+            session.commit()
+            return new_link
+        except SQLAlchemyError:
+            session.rollback()
+            return None
+        finally:
+            session.close()
+
+    def add_invited_user(self, invited_by_user_id: int, invited_user_id: int, competition_id: int, invite_link_id: int) -> bool:
+        session = self.Session()
+        try:
+            new_invited = InvitedUser(
+                invited_by_user_id=invited_by_user_id,
+                invited_user_id=invited_user_id,
+                competition_id=competition_id,
+                invite_link_id=invite_link_id
+            )
+            session.add(new_invited)
+            session.commit()
+            return True
+        except SQLAlchemyError:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+    def create_competition(self, name: str, description: Optional[str] = None, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> Competition:
+        session = self.Session()
+        try:
+            new_competition = Competition(
+                name=name,
+                start_date=start_date or datetime.now(),
+                end_date=end_date,
+                status='active'
+            )
+            session.add(new_competition)
+            session.commit()
+            return new_competition
+        except SQLAlchemyError:
+            session.rollback()
+            return None
+        finally:
+            session.close()
+
+    def finish_competition(self, competition_id: int, winner_user_id: Optional[int] = None) -> bool:
+        session = self.Session()
+        try:
+            competition = session.query(Competition).filter_by(id=competition_id).first()
+            if competition:
+                competition.status = 'finished'
+                competition.end_date = datetime.now()
+                if winner_user_id:
+                    competition.winner_user_id = winner_user_id
+                session.commit()
+                return True
+            return False
+        except SQLAlchemyError:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+    def get_user_stats(self, user_id: int, competition_id: int) -> Dict[str, Any]:
+        session = self.Session()
+        try:
+            participant = session.query(CompetitionParticipant).filter_by(user_id=user_id, competition_id=competition_id).first()
+            if participant:
+                return {
+                    "invites_count": participant.invites_count,
+                    "last_invite_at": participant.last_invite_at
+                }
+            return {"invites_count": 0, "last_invite_at": None}
+        finally:
+            session.close()
