@@ -220,9 +220,9 @@ Use /meulink para gerar novos links de convite.
             
             if not active_comp:
                 await update.message.reply_text(
-                    "🔴 **Nenhuma competição ativa no momento.**\n\n"
+                    "🔴 <b>Nenhuma competição ativa no momento.</b>\n\n"
                     "Aguarde o próximo desafio! 🚀",
-                    parse_mode='Markdown'
+                    parse_mode='HTML'
                 )
                 return
             
@@ -230,9 +230,9 @@ Use /meulink para gerar novos links de convite.
             
             if not ranking:
                 await update.message.reply_text(
-                    "📊 **Ainda não há participantes na competição.**\n\n"
+                    "📊 <b>Ainda não há participantes na competição.</b>\n\n"
                     "Seja o primeiro! Use /meulink para começar. 🚀",
-                    parse_mode='Markdown'
+                    parse_mode='HTML'
                 )
                 return
             
@@ -242,22 +242,22 @@ Use /meulink para gerar novos links de convite.
             
             time_str = format_time_remaining(time_left)
             
-            message = f"""
-🏆 **TOP 10 - {active_comp.name.upper()}**
-
-"""
+            # Escapar nome da competição para HTML
+            comp_name_safe = self._escape_html(active_comp.name.upper())
+            
+            message = f"🏆 <b>TOP 10 - {comp_name_safe}</b>\n\n"
             
             # Adicionar ranking
             medals = ['🥇', '🥈', '🥉'] + ['🏅'] * 7
             for i, participant in enumerate(ranking):
-                username = participant['username'] or participant['first_name'] or f"Usuário {participant['user_id']}"
-                message += f"{medals[i]} **@{username}** - {participant['invites_count']:,} pontos\n"
+                # Obter nome seguro do usuário
+                display_name = self._get_safe_display_name(participant)
+                invites_count = participant['invites_count']
+                
+                message += f"{medals[i]} {display_name} - {invites_count:,} pontos\n"
             
-            message += f"""
-⏰ **Tempo restante:** {time_str}
-🎯 **Meta para vitória:** {active_comp.target_invites:,} pontos
-
-"""
+            message += f"\n⏰ <b>Tempo restante:</b> {time_str}\n"
+            message += f"🎯 <b>Meta para vitória:</b> {active_comp.target_invites:,} pontos\n\n"
             
             # Adicionar posição do usuário se não estiver no top 10
             user = update.effective_user
@@ -275,15 +275,46 @@ Use /meulink para gerar novos links de convite.
             
             user_perf = self.comp_manager.get_user_performance(active_comp.id, user.id)
             if user_perf.get('is_participant') and user_perf['position'] > 10:
-                message += f"Sua posição: #{user_perf['position']} ({user_perf['invites_count']:,} pontos)"
+                message += f"<b>Sua posição:</b> #{user_perf['position']} ({user_perf['invites_count']:,} pontos)"
             elif not user_perf.get('is_participant'):
                 message += "Use /meulink para participar da competição!"
             
-            await update.message.reply_text(message, parse_mode='Markdown')
+            await update.message.reply_text(message, parse_mode='HTML')
             
         except Exception as e:
             logger.error(f"Erro no comando /ranking: {e}")
             await update.message.reply_text("❌ Erro ao buscar ranking da competição.")
+    
+    def _escape_html(self, text: str) -> str:
+        """Escapa caracteres especiais para HTML"""
+        if not text:
+            return ""
+        
+        return (text.replace('&', '&amp;')
+                   .replace('<', '&lt;')
+                   .replace('>', '&gt;')
+                   .replace('"', '&quot;')
+                   .replace("'", '&#x27;'))
+    
+    def _get_safe_display_name(self, participant: dict) -> str:
+        """Obtém nome seguro para exibição"""
+        username = participant.get('username')
+        first_name = participant.get('first_name')
+        user_id = participant.get('user_id')
+        
+        # Priorizar username se disponível
+        if username:
+            # Escapar username para HTML
+            safe_username = self._escape_html(username)
+            return f"@{safe_username}"
+        
+        # Usar first_name se disponível
+        if first_name:
+            safe_name = self._escape_html(first_name)
+            return safe_name
+        
+        # Fallback para user_id
+        return f"Usuário {user_id}"
     
     # Comandos administrativos
     async def start_create_competition(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
