@@ -79,7 +79,7 @@ class BotManager:
             # Inicializar gerenciadores
             self.safe_notifier = SafeNotifier(self.bot)
             self.competition_manager = CompetitionManager(self.db_manager)
-            self.invite_manager = InviteManager(self.db_manager)
+            self.invite_manager = InviteManager(self.db_manager, self.bot)
             self.tracking_monitor = TrackingMonitor(self.db_manager, self.bot)
             self.member_tracker = MemberTracker(self.db_manager)
             self.channel_notifier = ChannelNotifier(self.bot)
