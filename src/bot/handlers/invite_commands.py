@@ -93,7 +93,7 @@ class InviteHandlers:
                 message = f"""🎉 Bem-vindo ao Bot de Ranking de Convites!
 
 🏆 COMPETIÇÃO ATIVA: "{active_comp.name}"
-{active_comp.description or ''}
+{getattr(active_comp, 'description', '') or ''}
 
 ⏰ Tempo restante: {time_str}
 🎯 Meta: {active_comp.target_invites:,} convidados
