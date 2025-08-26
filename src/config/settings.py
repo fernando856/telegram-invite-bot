@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"  # Ignorar campos extras do .env
     
     @property
     def admin_ids_list(self) -> List[int]:
