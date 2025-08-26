@@ -90,6 +90,29 @@ class PostgreSQLManager:
         finally:
             session.close()
 
+    def create_competition(self, name: str, **kwargs) -> Competition:
+        session = self.Session()
+        try:
+            # Calcular end_date se duration_days foi fornecido
+            end_date = kwargs.get('end_date')
+            if not end_date and kwargs.get('duration_days'):
+                end_date = datetime.now() + timedelta(days=kwargs.get('duration_days'))
+            
+            new_competition = Competition(
+                name=name,
+                start_date=kwargs.get('start_date', datetime.now()),
+                end_date=end_date,
+                status='active'
+            )
+            session.add(new_competition)
+            session.commit()
+            return new_competition
+        except SQLAlchemyError:
+            session.rollback()
+            return None
+        finally:
+            session.close()
+
     def add_competition_participant(self, user_id: int, competition_id: int) -> bool:
         session = self.Session()
         try:
@@ -179,24 +202,6 @@ class PostgreSQLManager:
         except SQLAlchemyError:
             session.rollback()
             return False
-        finally:
-            session.close()
-
-    def create_competition(self, name: str, description: Optional[str] = None, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None) -> Competition:
-        session = self.Session()
-        try:
-            new_competition = Competition(
-                name=name,
-                start_date=start_date or datetime.now(),
-                end_date=end_date,
-                status='active'
-            )
-            session.add(new_competition)
-            session.commit()
-            return new_competition
-        except SQLAlchemyError:
-            session.rollback()
-            return None
         finally:
             session.close()
 
