@@ -531,6 +531,8 @@ Use /meulink para gerar novos links de convite.
     
     async def finish_competition_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /finalizar_competicao - Finaliza competição atual"""
+        from src.config.settings import settings
+        
         # Verificar se está em chat privado
         if not await self._check_private_chat(update, context):
             return

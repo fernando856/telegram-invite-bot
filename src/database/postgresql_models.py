@@ -1,4 +1,7 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, ForeignKey, BigInteger, UniqueConstraint
+"""
+Modelos PostgreSQL para o Bot de Ranking de Convites
+"""
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, BigInteger, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime, timedelta
@@ -48,62 +51,95 @@ class InviteLink(Base):
     __tablename__ = 'invite_links'
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
-    competition_id = Column(Integer, ForeignKey('competitions.id'), nullable=False)
-    invite_link = Column(String, unique=True, nullable=False)
-    name = Column(String)
+    competition_id = Column(Integer, ForeignKey('competitions.id'), nullable=True)
+    invite_link = Column(String, nullable=False)
+    name = Column(String, nullable=True)
     uses = Column(Integer, default=0)
     max_uses = Column(Integer, default=-1)
-    expire_date = Column(DateTime)
+    expire_date = Column(DateTime, nullable=True)
     points_awarded = Column(Integer, default=1)
+    is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 class InvitedUser(Base):
     __tablename__ = 'invited_users'
     id = Column(Integer, primary_key=True, autoincrement=True)
     invited_by_user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
-    invited_user_id = Column(BigInteger, ForeignKey('users.id'), unique=True, nullable=False)
+    invited_user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
     competition_id = Column(Integer, ForeignKey('competitions.id'), nullable=False)
     invite_link_id = Column(Integer, ForeignKey('invite_links.id'), nullable=False)
-    joined_at = Column(DateTime, default=datetime.now)
+    invited_at = Column(DateTime, default=datetime.now)
 
 class PostgreSQLManager:
     def __init__(self):
-        self.engine = create_engine(settings.database_url)
-        self.Session = sessionmaker(bind=self.engine)
-        Base.metadata.create_all(self.engine)
+        try:
+            # Usar DATABASE_URL se disponível, senão usar configuração padrão
+            database_url = getattr(settings, 'DATABASE_URL', None)
+            if not database_url:
+                database_url = f"postgresql://{settings.db_user}:{settings.db_password}@{settings.db_host}:{settings.db_port}/{settings.db_name}"
+            
+            self.engine = create_engine(database_url)
+            self.Session = sessionmaker(bind=self.engine)
+            Base.metadata.create_all(self.engine)
+        except Exception as e:
+            print(f"Erro ao conectar com PostgreSQL: {e}")
+            raise
 
-    def get_active_competition(self) -> Optional[Competition]:
+    def create_user(self, user_id: int, username: str = None, first_name: str = None, last_name: str = None) -> User:
         session = self.Session()
         try:
-            return session.query(Competition).filter_by(status='active').first()
+            existing_user = session.query(User).filter_by(id=user_id).first()
+            if existing_user:
+                return existing_user
+            
+            new_user = User(
+                id=user_id,
+                username=username,
+                first_name=first_name,
+                last_name=last_name
+            )
+            session.add(new_user)
+            session.commit()
+            return new_user
+        except SQLAlchemyError:
+            session.rollback()
+            return None
         finally:
             session.close()
 
-    def create_user(self, user_id: int, username: Optional[str] = None, first_name: Optional[str] = None, last_name: Optional[str] = None) -> User:
+    def get_user(self, user_id: int) -> Optional[User]:
+        """Busca um usuário pelo ID"""
         session = self.Session()
         try:
             user = session.query(User).filter_by(id=user_id).first()
-            if not user:
-                user = User(id=user_id, username=username, first_name=first_name, last_name=last_name)
-                session.add(user)
-                session.commit()
-            return user
+            if user:
+                # Converter para formato compatível com SQLite
+                from src.database.models import User as SQLiteUser
+                return SQLiteUser(
+                    id=user.id,
+                    user_id=user.id,
+                    username=user.username,
+                    first_name=user.first_name,
+                    last_name=user.last_name,
+                    total_invites=0,  # Calcular se necessário
+                    created_at=user.created_at,
+                    updated_at=user.updated_at
+                )
+            return None
+        except SQLAlchemyError:
+            return None
         finally:
             session.close()
 
-    def create_competition(self, name: str, **kwargs) -> Competition:
+    def create_competition(self, name: str, start_date: datetime, end_date: datetime, status: str = 'active') -> Competition:
         session = self.Session()
         try:
-            # Calcular end_date se duration_days foi fornecido
-            end_date = kwargs.get('end_date')
-            if not end_date and kwargs.get('duration_days'):
-                end_date = datetime.now() + timedelta(days=kwargs.get('duration_days'))
-            
             new_competition = Competition(
                 name=name,
-                start_date=kwargs.get('start_date', datetime.now()),
+                start_date=start_date,
                 end_date=end_date,
-                status='active'
+                status=status
             )
             session.add(new_competition)
             session.commit()
@@ -114,14 +150,26 @@ class PostgreSQLManager:
         finally:
             session.close()
 
-    def add_competition_participant(self, user_id: int, competition_id: int) -> bool:
+    def get_active_competition(self) -> Optional[Competition]:
         session = self.Session()
         try:
-            participant = session.query(CompetitionParticipant).filter_by(user_id=user_id, competition_id=competition_id).first()
-            if not participant:
-                new_participant = CompetitionParticipant(user_id=user_id, competition_id=competition_id)
-                session.add(new_participant)
-                session.commit()
+            return session.query(Competition).filter_by(status='active').first()
+        finally:
+            session.close()
+
+    def add_participant(self, competition_id: int, user_id: int) -> bool:
+        session = self.Session()
+        try:
+            existing = session.query(CompetitionParticipant).filter_by(competition_id=competition_id, user_id=user_id).first()
+            if existing:
+                return True
+            
+            new_participant = CompetitionParticipant(
+                competition_id=competition_id,
+                user_id=user_id
+            )
+            session.add(new_participant)
+            session.commit()
             return True
         except SQLAlchemyError:
             session.rollback()
@@ -129,25 +177,10 @@ class PostgreSQLManager:
         finally:
             session.close()
 
-    def get_competition_ranking(self, competition_id: int, limit: int = 10) -> List[Dict[str, Any]]:
+    def update_participant_invites(self, competition_id: int, user_id: int, invites_count: int) -> bool:
         session = self.Session()
         try:
-            ranking = (
-                session.query(User.username, User.first_name, CompetitionParticipant.invites_count)
-                .join(CompetitionParticipant, User.id == CompetitionParticipant.user_id)
-                .filter(CompetitionParticipant.competition_id == competition_id)
-                .order_by(CompetitionParticipant.invites_count.desc())
-                .limit(limit)
-                .all()
-            )
-            return [{"username": r.username, "first_name": r.first_name, "invites": r.invites_count} for r in ranking]
-        finally:
-            session.close()
-
-    def update_participant_invites(self, user_id: int, competition_id: int, invites_count: int) -> bool:
-        session = self.Session()
-        try:
-            participant = session.query(CompetitionParticipant).filter_by(user_id=user_id, competition_id=competition_id).first()
+            participant = session.query(CompetitionParticipant).filter_by(competition_id=competition_id, user_id=user_id).first()
             if participant:
                 participant.invites_count = invites_count
                 participant.last_invite_at = datetime.now()
@@ -206,33 +239,23 @@ class PostgreSQLManager:
         finally:
             session.close()
 
-    def finish_competition(self, competition_id: int, winner_user_id: Optional[int] = None) -> bool:
-        session = self.Session()
-        try:
-            competition = session.query(Competition).filter_by(id=competition_id).first()
-            if competition:
-                competition.status = 'finished'
-                competition.end_date = datetime.now()
-                if winner_user_id:
-                    competition.winner_user_id = winner_user_id
-                session.commit()
-                return True
-            return False
-        except SQLAlchemyError:
-            session.rollback()
-            return False
-        finally:
-            session.close()
-
     def get_user_stats(self, user_id: int, competition_id: int) -> Dict[str, Any]:
         session = self.Session()
         try:
-            participant = session.query(CompetitionParticipant).filter_by(user_id=user_id, competition_id=competition_id).first()
-            if participant:
-                return {
-                    "invites_count": participant.invites_count,
-                    "last_invite_at": participant.last_invite_at
-                }
-            return {"invites_count": 0, "last_invite_at": None}
+            participant = session.query(CompetitionParticipant).filter_by(competition_id=competition_id, user_id=user_id).first()
+            if not participant:
+                return {"invites_count": 0, "position": 0}
+            
+            # Calcular posição
+            better_participants = session.query(CompetitionParticipant).filter(
+                CompetitionParticipant.competition_id == competition_id,
+                CompetitionParticipant.invites_count > participant.invites_count
+            ).count()
+            
+            return {
+                "invites_count": participant.invites_count,
+                "position": better_participants + 1
+            }
         finally:
             session.close()
+
