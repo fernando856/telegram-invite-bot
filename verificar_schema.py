@@ -19,7 +19,7 @@ def main():
         
         with db.get_connection() as conn:
             # Verificar tabelas existentes
-            tables = conn.execute("""
+            tables = conn.execute(text("""
                 SELECT name FROM sqlite_master 
                 WHERE type='table'
                 ORDER BY name
@@ -29,23 +29,23 @@ def main():
             for table in tables:
                 print(f"   • {table['name']}")
             
-            print("\n🔗 SCHEMA DA TABELA invite_links:")
-            schema = conn.execute("PRAGMA table_info(invite_links)").fetchall()
+            print("\n🔗 SCHEMA DA TABELA invite_links_global:")
+            schema = conn.execute(text("PRAGMA table_info(invite_links_global)").fetchall()
             
             for col in schema:
                 print(f"   • {col['name']} ({col['type']}) - {'NOT NULL' if col['notnull'] else 'NULL'}")
             
-            print("\n👥 SCHEMA DA TABELA competition_participants:")
-            schema = conn.execute("PRAGMA table_info(competition_participants)").fetchall()
+            print("\n👥 SCHEMA DA TABELA competition_participants_global:")
+            schema = conn.execute(text("PRAGMA table_info(competition_participants_global)").fetchall()
             
             for col in schema:
                 print(f"   • {col['name']} ({col['type']}) - {'NOT NULL' if col['notnull'] else 'NULL'}")
             
-            print("\n📊 DADOS DE EXEMPLO invite_links:")
-            links = conn.execute("SELECT * FROM invite_links LIMIT 3").fetchall()
+            print("\n📊 DADOS DE EXEMPLO invite_links_global:")
+            links = conn.execute(text("SELECT * FROM invite_links_global_global LIMIT 3").fetchall()
             
             for link in links:
-                print(f"   • ID: {link['id']}, User: {link['user_id']}, Uses: {link.get('current_uses', 'N/A')}")
+                print(f"   • ID: {link['id']}, User: {link['user_id']}, Uses: {link.get('uses', 'N/A')}")
                 
     except Exception as e:
         print(f"❌ Erro: {e}")

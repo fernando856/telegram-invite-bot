@@ -4,8 +4,8 @@ Script para verificar logs de pontuação e identificar problemas
 """
 import os
 import sys
-import sqlite3
-from datetime import datetime
+from sqlalchemy import create_engine, VARCHAR
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 
 # Adicionar o diretório src ao path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -26,9 +26,9 @@ def main():
         with db.get_connection() as conn:
             # 1. Verificar competição ativa
             print("\n1️⃣ COMPETIÇÃO ATIVA:")
-            comp = conn.execute("""
+            comp = conn.execute(text("""
                 SELECT id, name, status, start_date, end_date 
-                FROM competitions 
+                FROM competitions_global_global 
                 WHERE status = 'active' 
                 ORDER BY created_at DESC 
                 LIMIT 1
@@ -45,9 +45,9 @@ def main():
             
             # 2. Verificar links de convite
             print(f"\n2️⃣ LINKS DE CONVITE (Competição {comp_id}):")
-            links = conn.execute("""
+            links = conn.execute(text("""
                 SELECT user_id, name, uses, max_uses, competition_id, created_at
-                FROM invite_links 
+                FROM invite_links_global_global 
                 WHERE competition_id = ? OR competition_id IS NULL
                 ORDER BY created_at DESC
             """, (comp_id,)).fetchall()
@@ -62,9 +62,9 @@ def main():
             
             # 3. Verificar participantes da competição
             print(f"\n3️⃣ PARTICIPANTES DA COMPETIÇÃO {comp_id}:")
-            participants = conn.execute("""
+            participants = conn.execute(text("""
                 SELECT user_id, invites_count, joined_at
-                FROM competition_participants 
+                FROM competition_participants_global_global 
                 WHERE competition_id = ?
                 ORDER BY invites_count DESC
             """, (comp_id,)).fetchall()
@@ -100,8 +100,8 @@ def main():
                 
                 if uses > 0:
                     # Verificar se usuário está na competição
-                    participant = conn.execute("""
-                        SELECT invites_count FROM competition_participants
+                    participant = conn.execute(text("""
+                        SELECT invites_count FROM competition_participants_global_global
                         WHERE competition_id = ? AND user_id = ?
                     """, (comp_id, user_id)).fetchone()
                     
@@ -111,8 +111,8 @@ def main():
                             print(f"   🔧 User {user_id}: {current_points} → {uses} pontos")
                             
                             # Atualizar pontos
-                            conn.execute("""
-                                UPDATE competition_participants 
+                            conn.execute(text("""
+                                UPDATE competition_participants_global_global 
                                 SET invites_count = ?
                                 WHERE competition_id = ? AND user_id = ?
                             """, (uses, comp_id, user_id))
@@ -124,8 +124,8 @@ def main():
                         print(f"   ⚠️ User {user_id}: Não está na competição, adicionando...")
                         
                         # Adicionar à competição
-                        conn.execute("""
-                            INSERT OR IGNORE INTO competition_participants 
+                        conn.execute(text("""
+                            INSERT OR IGNORE INTO competition_participants_global_global 
                             (competition_id, user_id, invites_count, joined_at)
                             VALUES (?, ?, ?, CURRENT_TIMESTAMP)
                         """, (comp_id, user_id, uses))
@@ -136,9 +136,9 @@ def main():
             
             # 6. Verificar resultado final
             print(f"\n6️⃣ RESULTADO APÓS SINCRONIZAÇÃO:")
-            participants_after = conn.execute("""
+            participants_after = conn.execute(text("""
                 SELECT user_id, invites_count
-                FROM competition_participants 
+                FROM competition_participants_global_global 
                 WHERE competition_id = ?
                 ORDER BY invites_count DESC
             """, (comp_id,)).fetchall()

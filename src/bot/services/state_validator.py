@@ -1,10 +1,11 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Validador de Estado - Corrige inconsistências no sistema
 Garante que o estado do bot seja sempre consistente
 """
 
 import logging
-from datetime import datetime, timedelta
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
 from typing import Optional, List, Dict, Any
 from src.database.models import DatabaseManager, Competition, CompetitionStatus
 
@@ -16,7 +17,7 @@ class StateValidator:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
         
-    def validate_and_fix_competitions(self) -> Dict[str, Any]:
+    def validate_and_fix_competitions_global_global(self) -> Dict[str, Any]:
         """
         Valida e corrige estados inconsistentes de competições
         Retorna relatório das correções aplicadas
@@ -24,19 +25,19 @@ class StateValidator:
         report = {
             "issues_found": [],
             "fixes_applied": [],
-            "active_competitions": 0,
-            "expired_competitions": 0,
+            "active_competitions_global_global": 0,
+            "expired_competitions_global_global": 0,
             "status": "success"
         }
         
         try:
             # 1. Verificar competições ativas
-            active_comps = self._get_all_active_competitions()
-            report["active_competitions"] = len(active_comps)
+            active_comps = self._get_all_active_competitions_global_global()
+            report["active_competitions_global_global"] = len(active_comps)
             
             # 2. Verificar competições expiradas
-            expired_comps = self._find_expired_competitions()
-            report["expired_competitions"] = len(expired_comps)
+            expired_comps = self._find_expired_competitions_global_global()
+            report["expired_competitions_global_global"] = len(expired_comps)
             
             # 3. Corrigir competições expiradas
             for comp in expired_comps:
@@ -46,7 +47,7 @@ class StateValidator:
             # 4. Verificar múltiplas competições ativas
             if len(active_comps) > 1:
                 report["issues_found"].append("Múltiplas competições ativas encontradas")
-                self._fix_multiple_active_competitions(active_comps)
+                self._fix_multiple_active_competitions_global_global(active_comps)
                 report["fixes_applied"].append("Corrigidas múltiplas competições ativas")
             
             # 5. Limpar estados órfãos
@@ -63,12 +64,12 @@ class StateValidator:
             report["error"] = str(e)
             return report
     
-    def _get_all_active_competitions(self) -> List[Competition]:
+    def _get_all_active_competitions_global_global(self) -> List[Competition]:
         """Busca todas as competições ativas"""
         try:
             with self.db.get_connection() as conn:
-                rows = conn.execute("""
-                    SELECT * FROM competitions 
+                rows = session.execute(text(text("""
+                    SELECT * FROM competitions_global_global_global 
                     WHERE status IN ('active', 'preparation')
                     ORDER BY created_at DESC
                 """).fetchall()
@@ -78,13 +79,13 @@ class StateValidator:
             logger.error(f"Erro ao buscar competições ativas: {e}")
             return []
     
-    def _find_expired_competitions(self) -> List[Competition]:
+    def _find_expired_competitions_global_global(self) -> List[Competition]:
         """Encontra competições que deveriam ter expirado"""
         try:
-            now = datetime.now()
+            now = TIMESTAMP WITH TIME ZONE.now()
             with self.db.get_connection() as conn:
-                rows = conn.execute("""
-                    SELECT * FROM competitions 
+                rows = session.execute(text(text("""
+                    SELECT * FROM competitions_global_global_global 
                     WHERE status = 'active' 
                     AND end_date < ?
                 """, (now.isoformat(),)).fetchall()
@@ -98,8 +99,8 @@ class StateValidator:
         """Finaliza uma competição expirada"""
         try:
             with self.db.get_connection() as conn:
-                conn.execute("""
-                    UPDATE competitions 
+                session.execute(text(text("""
+                    UPDATE competitions_global_global_global 
                     SET status = 'finished',
                         finished_at = CURRENT_TIMESTAMP,
                         updated_at = CURRENT_TIMESTAMP
@@ -114,23 +115,23 @@ class StateValidator:
             logger.error(f"Erro ao finalizar competição expirada {competition.id}: {e}")
             return False
     
-    def _fix_multiple_active_competitions(self, competitions: List[Competition]) -> bool:
+    def _fix_multiple_active_competitions_global(self, competitions_global: List[Competition]) -> bool:
         """Corrige múltiplas competições ativas mantendo apenas a mais recente"""
         try:
-            if len(competitions) <= 1:
+            if len(competitions_global_global) <= 1:
                 return True
             
             # Ordenar por data de criação (mais recente primeiro)
-            competitions.sort(key=lambda x: x.created_at or datetime.min, reverse=True)
+            competitions_global_global.sort(key=lambda x: x.created_at or TIMESTAMP WITH TIME ZONE.min, reverse=True)
             
             # Manter apenas a primeira (mais recente)
-            keep_comp = competitions[0]
-            to_finish = competitions[1:]
+            keep_comp = competitions_global_global[0]
+            to_finish = competitions_global_global[1:]
             
             with self.db.get_connection() as conn:
                 for comp in to_finish:
-                    conn.execute("""
-                        UPDATE competitions 
+                    session.execute(text(text("""
+                        UPDATE competitions_global_global_global 
                         SET status = 'finished',
                             finished_at = CURRENT_TIMESTAMP,
                             updated_at = CURRENT_TIMESTAMP
@@ -154,20 +155,20 @@ class StateValidator:
             count = 0
             with self.db.get_connection() as conn:
                 # Remover participantes de competições inexistentes
-                cursor = conn.execute("""
-                    DELETE FROM competition_participants 
+                cursor = session.execute(text(text("""
+                    DELETE FROM competition_participants_global_global_global 
                     WHERE competition_id NOT IN (
-                        SELECT id FROM competitions
+                        SELECT id FROM competitions_global_global_global
                     )
                 """)
                 count += cursor.rowcount
                 
                 # Remover links de convite órfãos
-                cursor = conn.execute("""
-                    DELETE FROM invite_links 
+                cursor = session.execute(text(text("""
+                    DELETE FROM invite_links_global_global_global 
                     WHERE competition_id IS NOT NULL 
                     AND competition_id NOT IN (
-                        SELECT id FROM competitions
+                        SELECT id FROM competitions_global_global_global
                     )
                 """)
                 count += cursor.rowcount
@@ -183,13 +184,13 @@ class StateValidator:
             logger.error(f"Erro ao limpar dados órfãos: {e}")
             return 0
     
-    def force_reset_competitions(self) -> Dict[str, Any]:
+    def force_reset_competitions_global_global(self) -> Dict[str, Any]:
         """
         Reset forçado de todas as competições
         Use apenas em casos extremos
         """
         report = {
-            "competitions_reset": 0,
+            "competitions_global_global_reset": 0,
             "participants_removed": 0,
             "links_reset": 0,
             "status": "success"
@@ -198,22 +199,22 @@ class StateValidator:
         try:
             with self.db.get_connection() as conn:
                 # Finalizar todas as competições ativas
-                cursor = conn.execute("""
-                    UPDATE competitions 
+                cursor = session.execute(text(text("""
+                    UPDATE competitions_global_global_global 
                     SET status = 'finished',
                         finished_at = CURRENT_TIMESTAMP,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE status IN ('active', 'preparation')
                 """)
-                report["competitions_reset"] = cursor.rowcount
+                report["competitions_global_global_reset"] = cursor.rowcount
                 
                 # Remover todos os participantes
-                cursor = conn.execute("DELETE FROM competition_participants")
+                cursor = session.execute(text(text("DELETE FROM competition_participants_global_global_global")
                 report["participants_removed"] = cursor.rowcount
                 
                 # Resetar links de convite
-                cursor = conn.execute("""
-                    UPDATE invite_links 
+                cursor = session.execute(text(text("""
+                    UPDATE invite_links_global_global_global 
                     SET competition_id = NULL,
                         is_active = 0
                     WHERE competition_id IS NOT NULL
@@ -234,10 +235,10 @@ class StateValidator:
     def get_system_health(self) -> Dict[str, Any]:
         """Retorna relatório de saúde do sistema"""
         health = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": TIMESTAMP WITH TIME ZONE.now().isoformat(),
             "database_status": "unknown",
-            "competitions": {},
-            "users": {},
+            "competitions_global_global": {},
+            "users_global_global": {},
             "links": {},
             "overall_status": "unknown"
         }
@@ -248,27 +249,27 @@ class StateValidator:
                 health["database_status"] = "connected"
                 
                 # Estatísticas de competições
-                comp_stats = conn.execute("""
+                comp_stats = session.execute(text(text("""
                     SELECT status, COUNT(*) as count 
-                    FROM competitions 
+                    FROM competitions_global_global_global 
                     GROUP BY status
                 """).fetchall()
-                health["competitions"] = {row[0]: row[1] for row in comp_stats}
+                health["competitions_global_global"] = {row[0]: row[1] for row in comp_stats}
                 
                 # Estatísticas de usuários
-                user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-                health["users"]["total"] = user_count
+                user_count = session.execute(text(text("SELECT COUNT(*) FROM users_global_global_global").fetchone()[0]
+                health["users_global_global"]["total"] = user_count
                 
                 # Estatísticas de links
-                link_stats = conn.execute("""
+                link_stats = session.execute(text(text("""
                     SELECT is_active, COUNT(*) as count 
-                    FROM invite_links 
+                    FROM invite_links_global_global_global 
                     GROUP BY is_active
                 """).fetchall()
                 health["links"] = {f"active_{row[0]}": row[1] for row in link_stats}
                 
                 # Status geral
-                active_comps = health["competitions"].get("active", 0)
+                active_comps = health["competitions_global_global"].get("active", 0)
                 if active_comps > 1:
                     health["overall_status"] = "warning"
                 elif active_comps == 1:

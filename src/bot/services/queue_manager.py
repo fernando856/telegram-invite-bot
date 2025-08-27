@@ -5,7 +5,7 @@ Processa operações em background para suportar alta concorrência
 
 import asyncio
 import logging
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 from typing import Dict, Any, Optional, Callable, List
 from dataclasses import dataclass, field
 from enum import Enum
@@ -29,9 +29,9 @@ class QueueTask:
     task_type: str
     data: Dict[str, Any]
     status: TaskStatus = TaskStatus.PENDING
-    created_at: datetime = field(default_factory=datetime.now)
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    created_at: TIMESTAMP WITH TIME ZONE = field(default_factory=TIMESTAMP WITH TIME ZONE.now)
+    started_at: Optional[TIMESTAMP WITH TIME ZONE] = None
+    completed_at: Optional[TIMESTAMP WITH TIME ZONE] = None
     retry_count: int = 0
     max_retries: int = 3
     error_message: Optional[str] = None
@@ -144,7 +144,7 @@ class QueueManager:
         try:
             # Marcar como processando
             task.status = TaskStatus.PROCESSING
-            task.started_at = datetime.now()
+            task.started_at = TIMESTAMP WITH TIME ZONE.now()
             
             # Obter handler
             handler = self.task_handlers[task.task_type]
@@ -160,7 +160,7 @@ class QueueManager:
             
             # Marcar como concluída
             task.status = TaskStatus.COMPLETED
-            task.completed_at = datetime.now()
+            task.completed_at = TIMESTAMP WITH TIME ZONE.now()
             task.result = result
             
             # Atualizar métricas
@@ -184,7 +184,7 @@ class QueueManager:
             else:
                 # Falha definitiva
                 task.status = TaskStatus.FAILED
-                task.completed_at = datetime.now()
+                task.completed_at = TIMESTAMP WITH TIME ZONE.now()
                 
                 self._update_metrics(time.time() - start_time, success=False)
                 logger.error(f"Tarefa falhou definitivamente: {task.id} - {e}")
@@ -242,7 +242,7 @@ class QueueManager:
     
     async def cleanup_old_tasks(self, max_age_hours: int = 24):
         """Remove tarefas antigas para liberar memória"""
-        cutoff_time = datetime.now() - timedelta(hours=max_age_hours)
+        cutoff_time = TIMESTAMP WITH TIME ZONE.now() - timedelta(hours=max_age_hours)
         
         old_task_ids = [
             task_id for task_id, task in self.tasks.items()

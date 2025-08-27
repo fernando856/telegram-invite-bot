@@ -37,8 +37,8 @@ def main():
         
         # Buscar competição ativa
         with db.get_connection() as conn:
-            comp_row = conn.execute("""
-                SELECT id, name FROM competitions 
+            comp_row = conn.execute(text("""
+                SELECT id, name FROM competitions_global_global 
                 WHERE status = 'active' 
                 ORDER BY created_at DESC 
                 LIMIT 1
@@ -87,10 +87,10 @@ def main():
         # Mostrar ranking atualizado
         print("\n🏆 RANKING ATUALIZADO:")
         with db.get_connection() as conn:
-            ranking = conn.execute("""
+            ranking = conn.execute(text("""
                 SELECT cp.user_id, cp.invites_count, cp.position, u.first_name, u.username
-                FROM competition_participants cp
-                LEFT JOIN users u ON cp.user_id = u.user_id
+                FROM competition_participants_global_global cp
+                LEFT JOIN users_global_global u ON cp.user_id = u.user_id
                 WHERE cp.competition_id = ?
                 ORDER BY cp.invites_count DESC, cp.joined_at ASC
                 LIMIT 10

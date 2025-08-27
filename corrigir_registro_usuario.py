@@ -6,7 +6,7 @@ Registra usuários existentes na competição ativa atual
 
 import sys
 import os
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 
 # Adicionar src ao path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -84,12 +84,12 @@ class CorrecaoRegistroUsuario:
             
             # Verificar se usuário tem links com usos
             user_link = self.db.get_user_invite_link(user_id, active_competition.id)
-            if user_link and user_link.get('current_uses', 0) > 0:
-                print(f"   🔗 Link encontrado: {user_link['current_uses']} usos")
+            if user_link and user_link.get('uses', 0) > 0:
+                print(f"   🔗 Link encontrado: {user_link['uses']} usos")
                 
                 # Atualizar contadores na competição
-                self.db.update_participant_invites(active_competition.id, user_id, user_link['current_uses'])
-                print(f"   ✅ Convites sincronizados: {user_link['current_uses']}")
+                self.db.update_participant_invites(active_competition.id, user_id, user_link['uses'])
+                print(f"   ✅ Convites sincronizados: {user_link['uses']}")
                 return True
             else:
                 print("   ℹ️ Nenhum convite para sincronizar")

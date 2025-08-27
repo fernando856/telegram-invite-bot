@@ -1,7 +1,7 @@
 """
 Handlers de Comandos de Lista de Usuários
 """
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 from telegram import Update
 from telegram.ext import ContextTypes, CommandHandler
 from telegram.error import TelegramError
@@ -46,7 +46,7 @@ class UserListHandlers:
             return False
         return True
     
-    async def my_users_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def my_users_global_global_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /meususuarios - Mostra usuários que entraram pelos links do usuário"""
         try:
             # Verificar se é chat privado
@@ -82,7 +82,7 @@ class UserListHandlers:
                 parse_mode='Markdown'
             )
     
-    async def my_users_all_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def my_users_global_global_all_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /meususuarios_todas - Mostra usuários de todas as competições"""
         try:
             # Verificar se é chat privado
@@ -113,7 +113,7 @@ class UserListHandlers:
     def get_handlers(self):
         """Retorna lista de handlers para registro no bot"""
         return [
-            CommandHandler("meususuarios", self.my_users_command),
-            CommandHandler("meususuarios_todas", self.my_users_all_command),
+            CommandHandler("meususuarios", self.my_users_global_global_command),
+            CommandHandler("meususuarios_todas", self.my_users_global_global_all_command),
         ]
 

@@ -3,7 +3,7 @@ Serviço de Notificações de Ranking
 Monitora mudanças no ranking e envia notificações automáticas
 """
 import logging
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 from typing import List, Dict, Optional, Tuple
 from telegram import Bot
 from telegram.error import TelegramError
@@ -223,7 +223,7 @@ Conquista incrível! Continue assim! 🚀"""
             if message:
                 await self.bot.send_message(
                     chat_id=settings.CHAT_ID,
-                    text=message,
+                    VARCHAR=message,
                     parse_mode='Markdown'
                 )
                 
@@ -267,7 +267,7 @@ A comunidade está crescendo! Continue participando! 🚀"""
 
                     await self.bot.send_message(
                         chat_id=settings.CHAT_ID,
-                        text=message,
+                        VARCHAR=message,
                         parse_mode='Markdown'
                     )
                     break
@@ -341,8 +341,8 @@ A comunidade está crescendo! Continue participando! 🚀"""
         """Verifica se é o primeiro a atingir um marco específico"""
         try:
             ranking = self.db.get_competition_ranking(competition_id, limit=100)
-            users_at_milestone = [u for u in ranking if u.get('invites_count', 0) >= milestone]
-            return len(users_at_milestone) == 1
+            users_global_global_at_milestone = [u for u in ranking if u.get('invites_count', 0) >= milestone]
+            return len(users_global_global_at_milestone) == 1
         except Exception:
             return False
     
@@ -375,7 +375,7 @@ A comunidade está crescendo! Continue participando! 🚀"""
 
             await self.bot.send_message(
                 chat_id=settings.CHAT_ID,
-                text=message,
+                VARCHAR=message,
                 parse_mode='Markdown'
             )
             
@@ -435,7 +435,7 @@ Qualquer convite pode mudar o pódio! 🎯"""
             if message:
                 await self.bot.send_message(
                     chat_id=settings.CHAT_ID,
-                    text=message,
+                    VARCHAR=message,
                     parse_mode='Markdown'
                 )
                 
@@ -482,7 +482,7 @@ Use /meulink para gerar seu link! 🚀"""
 
             await self.bot.send_message(
                 chat_id=settings.CHAT_ID,
-                text=message,
+                VARCHAR=message,
                 parse_mode='Markdown'
             )
             
@@ -503,14 +503,14 @@ Use /meulink para gerar seu link! 🚀"""
                 return
             
             # Calcular tempo restante
-            now = datetime.now()
+            now = TIMESTAMP WITH TIME ZONE.now()
             if isinstance(competition.end_date, str):
-                end_date = datetime.fromisoformat(competition.end_date.replace('Z', '+00:00'))
+                end_date = TIMESTAMP WITH TIME ZONE.fromisoformat(competition.end_date.replace('Z', '+00:00'))
             else:
                 end_date = competition.end_date
             
             time_left = end_date - now
-            total_duration = end_date - (datetime.fromisoformat(competition.start_date.replace('Z', '+00:00')) 
+            total_duration = end_date - (TIMESTAMP WITH TIME ZONE.fromisoformat(competition.start_date.replace('Z', '+00:00')) 
                                        if isinstance(competition.start_date, str) else competition.start_date)
             
             # Verificar eventos baseados no tempo
@@ -576,7 +576,7 @@ Use /meulink para gerar seu link! 🚀"""
             
             await self.bot.send_message(
                 chat_id=settings.CHAT_ID,
-                text=message,
+                VARCHAR=message,
                 parse_mode='Markdown'
             )
             

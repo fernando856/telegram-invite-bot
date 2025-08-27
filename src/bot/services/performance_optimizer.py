@@ -1,3 +1,4 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Otimizador de Performance - Suporte para 30.000 usuários
 Implementa cache, rate limiting e otimizações de banco
@@ -6,11 +7,11 @@ Implementa cache, rate limiting e otimizações de banco
 import asyncio
 import time
 import logging
-from datetime import datetime, timedelta
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
 from typing import Optional, Dict, Any, List, Tuple
 from collections import defaultdict, deque
 from functools import wraps
-import sqlite3
+from sqlalchemy import create_engine, VARCHAR
 from src.database.models import DatabaseManager
 
 logger = logging.getLogger(__name__)
@@ -110,16 +111,16 @@ class DatabaseOptimizer:
     def create_indexes(self) -> Dict[str, bool]:
         """Cria índices para otimizar queries"""
         indexes = {
-            "idx_users_user_id": "CREATE INDEX IF NOT EXISTS idx_users_user_id ON users(user_id)",
-            "idx_competitions_status": "CREATE INDEX IF NOT EXISTS idx_competitions_status ON competitions(status)",
-            "idx_competitions_dates": "CREATE INDEX IF NOT EXISTS idx_competitions_dates ON competitions(start_date, end_date)",
-            "idx_invite_links_user": "CREATE INDEX IF NOT EXISTS idx_invite_links_user ON invite_links(user_id)",
-            "idx_invite_links_competition": "CREATE INDEX IF NOT EXISTS idx_invite_links_competition ON invite_links(competition_id)",
-            "idx_invite_links_active": "CREATE INDEX IF NOT EXISTS idx_invite_links_active ON invite_links(is_active)",
-            "idx_competition_participants_comp": "CREATE INDEX IF NOT EXISTS idx_competition_participants_comp ON competition_participants(competition_id)",
-            "idx_competition_participants_user": "CREATE INDEX IF NOT EXISTS idx_competition_participants_user ON competition_participants(user_id)",
-            "idx_invited_users_inviter": "CREATE INDEX IF NOT EXISTS idx_invited_users_inviter ON invited_users(inviter_user_id)",
-            "idx_invited_users_link": "CREATE INDEX IF NOT EXISTS idx_invited_users_link ON invited_users(invite_link_id)"
+            "idx_users_global_global_user_id": "CREATE INDEX IF NOT EXISTS idx_users_global_global_user_id ON users_global_global(user_id)",
+            "idx_competitions_global_global_status": "CREATE INDEX IF NOT EXISTS idx_competitions_global_global_status ON competitions_global_global(status)",
+            "idx_competitions_global_global_dates": "CREATE INDEX IF NOT EXISTS idx_competitions_global_global_dates ON competitions_global_global(start_date, end_date)",
+            "idx_invite_links_global_global_user": "CREATE INDEX IF NOT EXISTS idx_invite_links_global_global_user ON invite_links_global_global(user_id)",
+            "idx_invite_links_global_global_competition": "CREATE INDEX IF NOT EXISTS idx_invite_links_global_global_competition ON invite_links_global_global(competition_id)",
+            "idx_invite_links_global_global_active": "CREATE INDEX IF NOT EXISTS idx_invite_links_global_global_active ON invite_links_global_global(is_active)",
+            "idx_competition_participants_global_global_comp": "CREATE INDEX IF NOT EXISTS idx_competition_participants_global_global_comp ON competition_participants_global_global(competition_id)",
+            "idx_competition_participants_global_global_user": "CREATE INDEX IF NOT EXISTS idx_competition_participants_global_global_user ON competition_participants_global_global(user_id)",
+            "idx_invited_users_global_global_inviter": "CREATE INDEX IF NOT EXISTS idx_invited_users_global_global_inviter ON invited_users_global_global(inviter_user_id)",
+            "idx_invited_users_global_global_link": "CREATE INDEX IF NOT EXISTS idx_invited_users_global_global_link ON invited_users_global_global(invite_link_id)"
         }
         
         results = {}
@@ -127,7 +128,7 @@ class DatabaseOptimizer:
             with self.db.get_connection() as conn:
                 for name, sql in indexes.items():
                     try:
-                        conn.execute(sql)
+                        session.execute(text(text(sql)
                         results[name] = True
                         logger.info(f"Índice criado: {name}")
                     except Exception as e:
@@ -152,11 +153,11 @@ class DatabaseOptimizer:
         try:
             with self.db.get_connection() as conn:
                 # VACUUM para compactar banco
-                conn.execute("VACUUM")
+                session.execute(text(text("VACUUM")
                 results["vacuum_executed"] = True
                 
                 # ANALYZE para atualizar estatísticas
-                conn.execute("ANALYZE")
+                session.execute(text(text("ANALYZE")
                 results["analyze_executed"] = True
                 
                 # Configurar PRAGMAs para performance
@@ -168,7 +169,7 @@ class DatabaseOptimizer:
                 ]
                 
                 for pragma in pragmas:
-                    conn.execute(pragma)
+                    session.execute(text(text(pragma)
                 
                 results["pragma_optimized"] = True
                 
@@ -297,7 +298,7 @@ class PerformanceOptimizer:
             "performance": {
                 "avg_response_time_ms": round(self.metrics["avg_response_time"] * 1000, 2)
             },
-            "timestamp": datetime.now().isoformat()
+            "timestamp": TIMESTAMP WITH TIME ZONE.now().isoformat()
         }
     
     def optimize_for_scale(self) -> Dict[str, Any]:

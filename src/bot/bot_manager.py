@@ -1,9 +1,10 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Bot Manager Principal - Sistema de Competição Gamificada
 """
 import asyncio
 import logging
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 from telegram import Bot
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ChatMemberHandler, ConversationHandler
 from telegram.error import TelegramError
@@ -136,7 +137,7 @@ class BotManager:
             
             # Handler para mensagens não reconhecidas
             self.application.add_handler(
-                MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_unknown_message)
+                MessageHandler(filters.VARCHAR & ~filters.COMMAND, self._handle_unknown_message)
             )
             
             logger.info("✅ Todos os handlers registrados")
@@ -301,8 +302,8 @@ class BotManager:
                         await self.ranking_notifier.check_competition_events(active_competition.id)
                         
                         # Enviar resumo diário (apenas uma vez por dia às 20h)
-                        from datetime import datetime
-                        now = datetime.now()
+                        from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
+                        now = TIMESTAMP WITH TIME ZONE.now()
                         if now.hour == 20 and now.minute < 30:  # Entre 20:00 e 20:30
                             await self.ranking_notifier.notify_daily_summary(active_competition.id)
                         

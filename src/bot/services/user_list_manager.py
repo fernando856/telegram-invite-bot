@@ -1,10 +1,11 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Gerenciador de Lista de Usuários por Link
 Responsável por rastrear e exibir usuários que entraram via links específicos
 """
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ class UserListManager:
     def __init__(self, db_manager):
         self.db = db_manager
     
-    def get_users_by_link(self, user_id: int, competition_id: int = None, limit: int = 50) -> List[Dict]:
+    def get_users_global_global_by_link(self, user_id: int, competition_id: int = None, limit: int = 50) -> List[Dict]:
         """Busca usuários que entraram via links de um usuário específico"""
         try:
             with self.db.get_connection() as conn:
@@ -29,8 +30,8 @@ class UserListManager:
                             il.name as link_name,
                             il.invite_link
                         FROM invite_members im
-                        JOIN invite_links il ON im.invite_link = il.invite_link
-                        LEFT JOIN users u ON im.invited_user_id = u.user_id
+                        JOIN invite_links_global_global_global il ON im.invite_link = il.invite_link
+                        LEFT JOIN users_global_global_global u ON im.invited_user_id = u.user_id
                         WHERE il.user_id = ? AND il.competition_id = ?
                         ORDER BY im.joined_at DESC
                         LIMIT ?
@@ -48,9 +49,9 @@ class UserListManager:
                             il.invite_link,
                             c.name as competition_name
                         FROM invite_members im
-                        JOIN invite_links il ON im.invite_link = il.invite_link
-                        LEFT JOIN users u ON im.invited_user_id = u.user_id
-                        LEFT JOIN competitions c ON il.competition_id = c.id
+                        JOIN invite_links_global_global_global il ON im.invite_link = il.invite_link
+                        LEFT JOIN users_global_global_global u ON im.invited_user_id = u.user_id
+                        LEFT JOIN competitions_global_global_global c ON il.competition_id = c.id
                         WHERE il.user_id = ?
                         ORDER BY im.joined_at DESC
                         LIMIT ?
@@ -58,7 +59,7 @@ class UserListManager:
                     params = (user_id, limit)
                 
                 # Verificar se tabela invite_members existe
-                tables = conn.execute("""
+                tables = session.execute(text(text("""
                     SELECT name FROM sqlite_master 
                     WHERE type='table' AND name='invite_members'
                 """).fetchall()
@@ -68,10 +69,10 @@ class UserListManager:
                     logger.info("Tabela invite_members não existe, simulando dados baseado em usos")
                     return self._simulate_user_list_from_uses(user_id, competition_id, limit)
                 
-                users = conn.execute(query, params).fetchall()
+                users_global = session.execute(text(text(query, params).fetchall()
                 
                 result = []
-                for user in users:
+                for user in users_global:
                     result.append({
                         'user_id': user['invited_user_id'],
                         'name': user['first_name'] or user['username'] or f"Usuário {user['invited_user_id']}",
@@ -93,8 +94,8 @@ class UserListManager:
                 if competition_id:
                     query = """
                         SELECT il.uses, il.name as link_name, il.invite_link, c.name as competition_name
-                        FROM invite_links il
-                        LEFT JOIN competitions c ON il.competition_id = c.id
+                        FROM invite_links_global_global_global il
+                        LEFT JOIN competitions_global_global_global c ON il.competition_id = c.id
                         WHERE il.user_id = ? AND il.competition_id = ?
                         ORDER BY il.created_at DESC
                     """
@@ -102,14 +103,14 @@ class UserListManager:
                 else:
                     query = """
                         SELECT il.uses, il.name as link_name, il.invite_link, c.name as competition_name
-                        FROM invite_links il
-                        LEFT JOIN competitions c ON il.competition_id = c.id
+                        FROM invite_links_global_global_global il
+                        LEFT JOIN competitions_global_global_global c ON il.competition_id = c.id
                         WHERE il.user_id = ?
                         ORDER BY il.created_at DESC
                     """
                     params = (user_id,)
                 
-                links = conn.execute(query, params).fetchall()
+                links = session.execute(text(text(query, params).fetchall()
                 
                 result = []
                 for link in links:
@@ -136,17 +137,17 @@ class UserListManager:
         """Cria tabela para rastrear membros convidados (para implementação futura)"""
         try:
             with self.db.get_connection() as conn:
-                conn.execute("""
+                session.execute(text(text("""
                     CREATE TABLE IF NOT EXISTS invite_members (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        invite_link TEXT NOT NULL,
-                        invited_user_id INTEGER NOT NULL,
-                        inviter_user_id INTEGER NOT NULL,
-                        competition_id INTEGER,
-                        joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (inviter_user_id) REFERENCES users (user_id),
-                        FOREIGN KEY (invited_user_id) REFERENCES users (user_id),
-                        FOREIGN KEY (competition_id) REFERENCES competitions (id),
+                        id BIGSERIAL PRIMARY KEY SERIAL,
+                        invite_link VARCHAR NOT NULL,
+                        invited_user_id BIGINT NOT NULL,
+                        inviter_user_id BIGINT NOT NULL,
+                        competition_id BIGINT,
+                        joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (inviter_user_id) REFERENCES users_global (user_id),
+                        FOREIGN KEY (invited_user_id) REFERENCES users_global (user_id),
+                        FOREIGN KEY (competition_id) REFERENCES competitions_global (id),
                         UNIQUE(invite_link, invited_user_id)
                     )
                 """)
@@ -166,7 +167,7 @@ class UserListManager:
             self.create_invite_members_table()
             
             with self.db.get_connection() as conn:
-                conn.execute("""
+                session.execute(text(text("""
                     INSERT OR IGNORE INTO invite_members 
                     (invite_link, invited_user_id, inviter_user_id, competition_id)
                     VALUES (?, ?, ?, ?)
@@ -183,43 +184,43 @@ class UserListManager:
     def get_user_invite_stats(self, user_id: int, competition_id: int = None) -> Dict:
         """Busca estatísticas detalhadas de convites de um usuário"""
         try:
-            users_list = self.get_users_by_link(user_id, competition_id)
+            users_global_global_list = self.get_users_global_global_by_link(user_id, competition_id)
             
             # Agrupar por competição se não especificada
             if not competition_id:
                 by_competition = {}
-                for user in users_list:
+                for user in users_global_global_list:
                     comp = user['competition']
                     if comp not in by_competition:
                         by_competition[comp] = []
                     by_competition[comp].append(user)
                 
                 return {
-                    'total_invites': len(users_list),
+                    'total_invites': len(users_global_global_list),
                     'by_competition': by_competition,
-                    'recent_invites': users_list[:10]  # 10 mais recentes
+                    'recent_invites': users_global_global_list[:10]  # 10 mais recentes
                 }
             else:
                 return {
-                    'total_invites': len(users_list),
-                    'users': users_list,
+                    'total_invites': len(users_global_global_list),
+                    'users_global_global': users_global_global_list,
                     'competition_id': competition_id
                 }
                 
         except Exception as e:
             logger.error(f"❌ Erro ao buscar estatísticas de convites: {e}")
-            return {'total_invites': 0, 'users': []}
+            return {'total_invites': 0, 'users_global_global': []}
     
     def format_user_list_message(self, user_id: int, competition_id: int = None, limit: int = 20) -> str:
         """Formata lista de usuários para exibição no Telegram"""
         try:
             # Buscar dados reais dos usuários convidados
-            invited_data = self._get_invited_users_data(user_id, competition_id)
+            invited_data = self._get_invited_users_global_global_data(user_id, competition_id)
             
             # Buscar nome do usuário
             with self.db.get_connection() as conn:
-                user_info = conn.execute("""
-                    SELECT first_name, username FROM users WHERE user_id = ?
+                user_info = session.execute(text(text("""
+                    SELECT first_name, username FROM users_global_global_global WHERE user_id = ?
                 """, (user_id,)).fetchone()
                 
                 user_name = "Você"
@@ -231,15 +232,15 @@ class UserListManager:
             if competition_id:
                 # Buscar nome da competição
                 with self.db.get_connection() as conn:
-                    comp_info = conn.execute("""
-                        SELECT name FROM competitions WHERE id = ?
+                    comp_info = session.execute(text(text("""
+                        SELECT name FROM competitions_global_global_global WHERE id = ?
                     """, (competition_id,)).fetchone()
                     
                     if comp_info:
                         message += f"🏆 **Competição:** {comp_info['name']}\n\n"
             
             total_count = invited_data['total_count']
-            users_list = invited_data['users_list']
+            users_global_global_list = invited_data['users_global_global_list']
             has_real_data = invited_data['has_real_data']
             
             if total_count == 0:
@@ -252,7 +253,7 @@ class UserListManager:
             message += "👤 **Lista de usuários:**\n"
             
             # Mostrar lista (limitada)
-            for i, user_entry in enumerate(users_list[:limit], 1):
+            for i, user_entry in enumerate(users_global_global_list[:limit], 1):
                 message += f"{user_entry}\n"
             
             # Indicar se há mais usuários
@@ -274,38 +275,38 @@ class UserListManager:
             logger.error(f"Erro ao formatar lista de usuários: {e}")
             return "❌ **Erro ao buscar lista de usuários convidados.**\n\nTente novamente mais tarde."
     
-    def _get_invited_users_data(self, user_id: int, competition_id: int = None) -> dict:
+    def _get_invited_users_global_global_data(self, user_id: int, competition_id: int = None) -> dict:
         """Busca dados dos usuários convidados sem import circular"""
         try:
-            # Verificar se existe tabela invited_users
+            # Verificar se existe tabela invited_users_global
             with self.db.get_connection() as conn:
-                cursor = conn.execute("""
+                cursor = session.execute(text(text("""
                     SELECT name FROM sqlite_master 
-                    WHERE type='table' AND name='invited_users'
+                    WHERE type='table' AND name='invited_users_global_global'
                 """)
                 
                 if cursor.fetchone():
-                    # Usar dados reais da tabela invited_users
+                    # Usar dados reais da tabela invited_users_global
                     if competition_id:
-                        cursor = conn.execute("""
+                        cursor = session.execute(text(text("""
                             SELECT username, first_name, last_name, joined_at
-                            FROM invited_users 
+                            FROM invited_users_global_global 
                             WHERE inviter_user_id = ? AND competition_id = ?
                             ORDER BY joined_at DESC
                         """, (user_id, competition_id))
                     else:
-                        cursor = conn.execute("""
+                        cursor = session.execute(text(text("""
                             SELECT username, first_name, last_name, joined_at
-                            FROM invited_users 
+                            FROM invited_users_global_global 
                             WHERE inviter_user_id = ?
                             ORDER BY joined_at DESC
                         """, (user_id,))
                     
-                    invited_users = cursor.fetchall()
+                    invited_users_global_global = cursor.fetchall()
                     
-                    if invited_users:
-                        users_list = []
-                        for i, user in enumerate(invited_users, 1):
+                    if invited_users_global_global:
+                        users_global_global_list = []
+                        for i, user in enumerate(invited_users_global_global, 1):
                             # Formatar nome de exibição
                             if user['username']:
                                 display_name = f"@{user['username']}"
@@ -320,19 +321,19 @@ class UserListManager:
                             if joined_date:
                                 try:
                                     if isinstance(joined_date, str):
-                                        date_obj = datetime.fromisoformat(joined_date.replace('Z', '+00:00'))
+                                        date_obj = TIMESTAMP WITH TIME ZONE.fromisoformat(joined_date.replace('Z', '+00:00'))
                                     else:
                                         date_obj = joined_date
                                     formatted_date = date_obj.strftime("%d/%m/%Y às %H:%M")
-                                    users_list.append(f"{i}. {display_name} - {formatted_date}")
+                                    users_global_global_list.append(f"{i}. {display_name} - {formatted_date}")
                                 except:
-                                    users_list.append(f"{i}. {display_name}")
+                                    users_global_global_list.append(f"{i}. {display_name}")
                             else:
-                                users_list.append(f"{i}. {display_name}")
+                                users_global_global_list.append(f"{i}. {display_name}")
                         
                         return {
-                            'total_count': len(invited_users),
-                            'users_list': users_list,
+                            'total_count': len(invited_users_global_global),
+                            'users_global_global_list': users_global_global_list,
                             'has_real_data': True
                         }
                 
@@ -348,15 +349,15 @@ class UserListManager:
         try:
             with self.db.get_connection() as conn:
                 if competition_id:
-                    cursor = conn.execute("""
+                    cursor = session.execute(text(text("""
                         SELECT SUM(uses) as total_uses
-                        FROM invite_links 
+                        FROM invite_links_global_global_global 
                         WHERE user_id = ? AND competition_id = ?
                     """, (user_id, competition_id))
                 else:
-                    cursor = conn.execute("""
+                    cursor = session.execute(text(text("""
                         SELECT SUM(uses) as total_uses
-                        FROM invite_links 
+                        FROM invite_links_global_global_global 
                         WHERE user_id = ?
                     """, (user_id,))
                 
@@ -364,7 +365,7 @@ class UserListManager:
                 total_uses = result['total_uses'] if result and result['total_uses'] else 0
                 
                 # Gerar lista estimada com nomes mais realistas
-                users_list = []
+                users_global_global_list = []
                 sample_usernames = [
                     "@usuario_convidado", "@novo_membro", "@participante", 
                     "@convidado_especial", "@membro_ativo", "@usuario_premium",
@@ -375,13 +376,13 @@ class UserListManager:
                     # Alternar entre username simulado e nome genérico
                     if i <= len(sample_usernames):
                         username = f"{sample_usernames[i-1]}{i}"
-                        users_list.append(f"{i}. {username} ⚡")
+                        users_global_global_list.append(f"{i}. {username} ⚡")
                     else:
-                        users_list.append(f"{i}. @usuario_{i} ⚡")
+                        users_global_global_list.append(f"{i}. @usuario_{i} ⚡")
                 
                 return {
                     'total_count': total_uses,
-                    'users_list': users_list,
+                    'users_global_global_list': users_global_global_list,
                     'has_real_data': False
                 }
                 
@@ -389,6 +390,6 @@ class UserListManager:
             logger.error(f"Erro ao buscar dados estimados: {e}")
             return {
                 'total_count': 0,
-                'users_list': [],
+                'users_global_global_list': [],
                 'has_real_data': False
             }

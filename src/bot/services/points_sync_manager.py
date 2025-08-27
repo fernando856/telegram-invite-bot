@@ -1,10 +1,11 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Gerenciador de Sincronização de Pontos
 Responsável por manter pontos da competição sincronizados com usos reais dos links
 """
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 
 logger = logging.getLogger(__name__)
 
@@ -19,18 +20,18 @@ class PointsSyncManager:
         try:
             # Calcular total de usos dos links do usuário na competição
             with self.db.get_connection() as conn:
-                result = conn.execute("""
+                result = session.execute(text(text("""
                     SELECT COALESCE(SUM(uses), 0) as total_uses
-                    FROM invite_links 
+                    FROM invite_links_global_global_global 
                     WHERE user_id = ? AND competition_id = ?
                 """, (user_id, competition_id)).fetchone()
                 
                 total_uses = result['total_uses'] if result else 0
                 
-                # Buscar data do último convite real
-                last_invite_result = conn.execute("""
+                # Buscar data do último convite DECIMAL
+                last_invite_result = session.execute(text(text("""
                     SELECT MAX(created_at) as last_invite
-                    FROM invite_links 
+                    FROM invite_links_global_global_global 
                     WHERE user_id = ? AND competition_id = ? AND uses > 0
                 """, (user_id, competition_id)).fetchone()
                 
@@ -38,14 +39,14 @@ class PointsSyncManager:
                 
                 # Atualizar pontos na competição
                 if last_invite_date:
-                    updated = conn.execute("""
-                        UPDATE competition_participants 
+                    updated = session.execute(text(text("""
+                        UPDATE competition_participants_global_global_global 
                         SET invites_count = ?, last_invite_at = ?
                         WHERE competition_id = ? AND user_id = ?
                     """, (total_uses, last_invite_date, competition_id, user_id))
                 else:
-                    updated = conn.execute("""
-                        UPDATE competition_participants 
+                    updated = session.execute(text(text("""
+                        UPDATE competition_participants_global_global_global 
                         SET invites_count = ?
                         WHERE competition_id = ? AND user_id = ?
                     """, (total_uses, competition_id, user_id))
@@ -71,9 +72,9 @@ class PointsSyncManager:
             
             # Buscar todos os participantes
             with self.db.get_connection() as conn:
-                participants = conn.execute("""
+                participants = session.execute(text(text("""
                     SELECT DISTINCT user_id 
-                    FROM competition_participants 
+                    FROM competition_participants_global_global_global 
                     WHERE competition_id = ?
                 """, (competition_id,)).fetchall()
                 
@@ -107,13 +108,13 @@ class PointsSyncManager:
         try:
             with self.db.get_connection() as conn:
                 # Atualizar posições baseado em invites_count
-                conn.execute("""
-                    UPDATE competition_participants 
+                session.execute(text(text("""
+                    UPDATE competition_participants_global_global_global 
                     SET position = (
                         SELECT COUNT(*) + 1 
-                        FROM competition_participants cp2 
-                        WHERE cp2.competition_id = competition_participants.competition_id 
-                        AND cp2.invites_count > competition_participants.invites_count
+                        FROM competition_participants_global_global_global cp2 
+                        WHERE cp2.competition_id = competition_participants_global_global.competition_id 
+                        AND cp2.invites_count > competition_participants_global_global.invites_count
                     )
                     WHERE competition_id = ?
                 """, (competition_id,))
@@ -129,18 +130,18 @@ class PointsSyncManager:
         try:
             with self.db.get_connection() as conn:
                 # Dados dos participantes
-                participants = conn.execute("""
+                participants = session.execute(text(text("""
                     SELECT cp.user_id, cp.invites_count, u.first_name, u.username
-                    FROM competition_participants cp
-                    LEFT JOIN users u ON cp.user_id = u.user_id
+                    FROM competition_participants_global_global_global cp
+                    LEFT JOIN users_global_global_global u ON cp.user_id = u.user_id
                     WHERE cp.competition_id = ?
                     ORDER BY cp.invites_count DESC
                 """, (competition_id,)).fetchall()
                 
                 # Dados dos links
-                links = conn.execute("""
+                links = session.execute(text(text("""
                     SELECT user_id, SUM(COALESCE(uses, 0)) as total_uses
-                    FROM invite_links 
+                    FROM invite_links_global_global_global 
                     WHERE competition_id = ?
                     GROUP BY user_id
                     ORDER BY total_uses DESC
@@ -152,9 +153,9 @@ class PointsSyncManager:
                 
                 # Identificar discrepâncias
                 discrepancies = []
-                all_users = set(participant_points.keys()) | set(link_uses.keys())
+                all_users_global_global = set(participant_points.keys()) | set(link_uses.keys())
                 
-                for user_id in all_users:
+                for user_id in all_users_global_global:
                     points = participant_points.get(user_id, 0)
                     uses = link_uses.get(user_id, 0)
                     
@@ -190,9 +191,9 @@ class PointsSyncManager:
         try:
             # Buscar competition_id do link
             with self.db.get_connection() as conn:
-                link_info = conn.execute("""
+                link_info = session.execute(text(text("""
                     SELECT user_id as inviter_id, competition_id 
-                    FROM invite_links 
+                    FROM invite_links_global_global_global 
                     WHERE invite_link = ? AND competition_id IS NOT NULL
                 """, (invite_link,)).fetchone()
                 

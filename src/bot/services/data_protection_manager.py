@@ -1,11 +1,12 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Gerenciador de Proteção de Dados
 Previne perda de dados e monitora operações críticas
 """
-import sqlite3
+from sqlalchemy import create_engine, VARCHAR
 import json
 import os
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 from typing import Dict, List, Any, Optional
 import logging
 from contextlib import contextmanager
@@ -13,7 +14,7 @@ from contextlib import contextmanager
 logger = logging.getLogger(__name__)
 
 class DataProtectionManager:
-    def __init__(self, db_path: str = "bot_database.db"):
+    def __init__(self, db_path: str = "bot_postgresql://user:pass@localhost/dbname"):
         self.db_path = db_path
         self.backup_dir = "data_backups"
         self.log_file = "data_operations.log"
@@ -52,10 +53,10 @@ class DataProtectionManager:
     def create_snapshot(self, reason: str) -> str:
         """Cria snapshot rápido dos dados críticos"""
         try:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = TIMESTAMP WITH TIME ZONE.now().strftime("%Y%m%d_%H%M%S")
             snapshot_file = f"{self.backup_dir}/snapshot_{timestamp}_{reason}.json"
             
-            conn = sqlite3.connect(self.db_path)
+            conn = postgresql_connection(self.db_path)
             conn.row_factory = sqlite3.Row
             
             # Dados críticos para backup rápido
@@ -66,15 +67,15 @@ class DataProtectionManager:
             }
             
             # Links com usos > 0
-            cursor = conn.execute("SELECT * FROM invite_links WHERE uses > 0")
+            cursor = session.execute(text(text("SELECT * FROM invite_links_global_global_global WHERE uses > 0")
             snapshot_data["critical_data"]["active_links"] = [dict(row) for row in cursor.fetchall()]
             
             # Participantes com pontos > 0
-            cursor = conn.execute("SELECT * FROM competition_participants WHERE invites_count > 0")
+            cursor = session.execute(text(text("SELECT * FROM competition_participants_global_global_global WHERE invites_count > 0")
             snapshot_data["critical_data"]["active_participants"] = [dict(row) for row in cursor.fetchall()]
             
             # Competição ativa
-            cursor = conn.execute("SELECT * FROM competitions WHERE status = 'active'")
+            cursor = session.execute(text(text("SELECT * FROM competitions_global_global_global WHERE status = 'active'")
             active_comp = cursor.fetchone()
             if active_comp:
                 snapshot_data["critical_data"]["active_competition"] = dict(active_comp)
@@ -95,7 +96,7 @@ class DataProtectionManager:
         """Log detalhado de operações"""
         try:
             log_entry = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": TIMESTAMP WITH TIME ZONE.now().isoformat(),
                 "status": status,
                 "operation": operation,
                 "user_id": user_id,
@@ -115,25 +116,25 @@ class DataProtectionManager:
     def validate_data_integrity(self) -> Dict[str, Any]:
         """Valida integridade dos dados críticos"""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = postgresql_connection(self.db_path)
             conn.row_factory = sqlite3.Row
             
             validation_result = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": TIMESTAMP WITH TIME ZONE.now().isoformat(),
                 "status": "valid",
                 "issues": [],
                 "statistics": {}
             }
             
             # Verificar consistência entre links e participantes
-            cursor = conn.execute("""
+            cursor = session.execute(text(text("""
                 SELECT 
                     il.user_id,
                     il.competition_id,
                     SUM(il.uses) as total_uses,
                     cp.invites_count
-                FROM invite_links il
-                LEFT JOIN competition_participants cp ON il.user_id = cp.user_id AND il.competition_id = cp.competition_id
+                FROM invite_links_global_global_global il
+                LEFT JOIN competition_participants_global_global_global cp ON il.user_id = cp.user_id AND il.competition_id = cp.competition_id
                 WHERE il.competition_id IS NOT NULL
                 GROUP BY il.user_id, il.competition_id
                 HAVING total_uses != COALESCE(cp.invites_count, 0)
@@ -152,16 +153,16 @@ class DataProtectionManager:
                     })
             
             # Estatísticas gerais
-            cursor = conn.execute("SELECT COUNT(*) as total FROM invite_links WHERE uses > 0")
+            cursor = session.execute(text(text("SELECT COUNT(*) as total FROM invite_links_global_global_global WHERE uses > 0")
             validation_result["statistics"]["active_links"] = cursor.fetchone()["total"]
             
-            cursor = conn.execute("SELECT COUNT(*) as total FROM competition_participants WHERE invites_count > 0")
+            cursor = session.execute(text(text("SELECT COUNT(*) as total FROM competition_participants_global_global_global WHERE invites_count > 0")
             validation_result["statistics"]["active_participants"] = cursor.fetchone()["total"]
             
-            cursor = conn.execute("SELECT SUM(uses) as total FROM invite_links")
+            cursor = session.execute(text(text("SELECT SUM(uses) as total FROM invite_links_global_global_global")
             validation_result["statistics"]["total_uses"] = cursor.fetchone()["total"] or 0
             
-            cursor = conn.execute("SELECT SUM(invites_count) as total FROM competition_participants")
+            cursor = session.execute(text(text("SELECT SUM(invites_count) as total FROM competition_participants_global_global_global")
             validation_result["statistics"]["total_points"] = cursor.fetchone()["total"] or 0
             
             conn.close()
@@ -181,20 +182,20 @@ class DataProtectionManager:
                 return {"status": "no_issues", "message": "Nenhuma inconsistência detectada"}
             
             fix_result = {
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": TIMESTAMP WITH TIME ZONE.now().isoformat(),
                 "fixes_applied": [],
                 "errors": []
             }
             
-            conn = sqlite3.connect(self.db_path)
+            conn = postgresql_connection(self.db_path)
             
             # Corrigir inconsistências de sincronização
             for issue in validation.get("issues", []):
                 if issue["type"] == "sync_mismatch":
                     try:
                         # Usar dados dos links como fonte da verdade
-                        conn.execute("""
-                            UPDATE competition_participants 
+                        session.execute(text(text("""
+                            UPDATE competition_participants_global_global_global 
                             SET invites_count = ? 
                             WHERE user_id = ? AND competition_id = ?
                         """, (issue["link_uses"], issue["user_id"], issue["competition_id"]))

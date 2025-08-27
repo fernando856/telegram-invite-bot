@@ -7,7 +7,7 @@ Investiga por que as estatísticas mostram convites mas o ranking não
 import asyncio
 import sys
 import os
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 
 # Adicionar src ao path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -62,7 +62,7 @@ class DiagnosticoDiscrepancia:
             # Tentar encontrar o usuário Fernando
             fernando_user = None
             
-            # Como não temos get_all_users, vamos tentar IDs comuns
+            # Como não temos get_all_users_global, vamos tentar IDs comuns
             possible_user_ids = [7874182984, 6440447977, 381199906]  # IDs dos admins
             
             for user_id in possible_user_ids:
@@ -86,7 +86,7 @@ class DiagnosticoDiscrepancia:
                 # Verificar links do usuário
                 user_link = self.db.get_user_invite_link(fernando_user.user_id, active_competition.id)
                 if user_link:
-                    print(f"   🔗 Link da competição: {user_link['name']} - {user_link['current_uses']}/{user_link['max_uses']} usos")
+                    print(f"   🔗 Link da competição: {user_link['name']} - {user_link['uses']}/{user_link['max_uses']} usos")
                 else:
                     print(f"   ❌ Nenhum link para a competição ativa")
                     

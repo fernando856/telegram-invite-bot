@@ -1,8 +1,9 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Gerenciador de Competições - Sistema de Competição Gamificada
 """
 import asyncio
-from datetime import datetime, timedelta
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
 from typing import Optional, List, Dict, Any, Tuple
 from telegram import Bot
 from telegram.error import TelegramError
@@ -44,8 +45,8 @@ class CompetitionManager:
             if target_invites < 100 or target_invites > 50000:
                 raise ValueError("Meta deve ser entre 100 e 50.000 convidados")
             
-            # Usar datetime simples sem timezone
-            now = datetime.now()
+            # Usar TIMESTAMP WITH TIME ZONE simples sem timezone
+            now = TIMESTAMP WITH TIME ZONE.now()
             
             competition = self.db.create_competition(
                 name=name,
@@ -104,7 +105,7 @@ class CompetitionManager:
         """Busca uma competição por ID"""
         try:
             with self.db.get_connection() as conn:
-                row = conn.execute("SELECT * FROM competitions WHERE id = ?", (competition_id,)).fetchone()
+                row = session.execute(text(text("SELECT * FROM competitions_global_global_global WHERE id = ?", (competition_id,)).fetchone()
                 return Competition(**dict(row)) if row else None
         except Exception as e:
             logger.error(f"Erro ao buscar competição {competition_id}: {e}")
@@ -188,7 +189,7 @@ class CompetitionManager:
             
             # Calcular tempo restante - versão robusta
             from src.bot.utils.datetime_helper import calculate_time_remaining
-            now = datetime.now()
+            now = TIMESTAMP WITH TIME ZONE.now()
             time_left = calculate_time_remaining(competition.end_date, now)
             
             return {
@@ -217,7 +218,7 @@ class CompetitionManager:
             
             # Calcular estatísticas adicionais
             start_date = safe_datetime_conversion(competition.start_date)
-            days_active = (datetime.now() - start_date).days + 1
+            days_active = (TIMESTAMP WITH TIME ZONE.now() - start_date).days + 1
             avg_per_day = user_stats['invites_count'] / days_active if days_active > 0 else 0
             remaining_to_target = max(0, competition.target_invites - user_stats['invites_count'])
             
@@ -243,12 +244,12 @@ class CompetitionManager:
                 return False
             
             # Versão simplificada sem comparações complexas
-            now = datetime.now()
+            now = TIMESTAMP WITH TIME ZONE.now()
             
             # Verificar se o tempo acabou - versão robusta
             try:
                 if isinstance(active_comp.end_date, str):
-                    end_date = datetime.fromisoformat(active_comp.end_date.replace('Z', '+00:00'))
+                    end_date = TIMESTAMP WITH TIME ZONE.fromisoformat(active_comp.end_date.replace('Z', '+00:00'))
                 else:
                     end_date = active_comp.end_date
                 
@@ -301,7 +302,7 @@ Boa sorte a todos! 🍀
             
             await self.bot.send_message(
                 chat_id=settings.announcement_channel,
-                text=message,
+                VARCHAR=message,
                 parse_mode='Markdown'
             )
             
@@ -353,7 +354,7 @@ Próxima competição em breve! 🚀
             
             await self.bot.send_message(
                 chat_id=settings.announcement_channel,
-                text=message,
+                VARCHAR=message,
                 parse_mode='Markdown'
             )
             
@@ -384,7 +385,7 @@ Continue assim para chegar aos {competition.target_invites:,}! 🚀
                     
                     await self.bot.send_message(
                         chat_id=settings.announcement_channel,
-                        text=message,
+                        VARCHAR=message,
                         parse_mode='Markdown'
                     )
                     break
@@ -409,7 +410,7 @@ Aguardem o ranking final! 🏁
             
             await self.bot.send_message(
                 chat_id=settings.announcement_channel,
-                text=message,
+                VARCHAR=message,
                 parse_mode='Markdown'
             )
             
@@ -425,7 +426,7 @@ Aguardem o ranking final! 🏁
             logger.info(f"Buscando ranking da competição {competition_id} (limit: {limit})")
             
             # Buscar participantes da competição ordenados por convites
-            participants = self.db.get_competition_participants(competition_id)
+            participants = self.db.get_competition_participants_global_global(competition_id)
             
             if not participants:
                 logger.info(f"Nenhum participante encontrado para competição {competition_id}")

@@ -5,7 +5,7 @@ Diagnóstico do Sistema de Pontuação - Análise Completa
 import os
 import sys
 import logging
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 
 # Adicionar o diretório src ao path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -34,7 +34,7 @@ def main():
         print("\n📊 1. VERIFICANDO COMPETIÇÃO ATIVA:")
         with db.get_connection() as conn:
             comp_row = conn.execute("""
-                SELECT * FROM competitions 
+                SELECT * FROM competitions_global_global 
                 WHERE status = 'active' 
                 ORDER BY created_at DESC 
                 LIMIT 1
@@ -53,8 +53,8 @@ def main():
         with db.get_connection() as conn:
             participants = conn.execute("""
                 SELECT cp.*, u.username, u.first_name 
-                FROM competition_participants cp
-                LEFT JOIN users u ON cp.user_id = u.user_id
+                FROM competition_participants_global_global cp
+                LEFT JOIN users_global_global u ON cp.user_id = u.user_id
                 WHERE cp.competition_id = ?
                 ORDER BY cp.invites_count DESC
             """, (competition_id,)).fetchall()
@@ -68,8 +68,8 @@ def main():
         with db.get_connection() as conn:
             links = conn.execute("""
                 SELECT il.*, u.username, u.first_name 
-                FROM invite_links il
-                LEFT JOIN users u ON il.user_id = u.user_id
+                FROM invite_links_global_global il
+                LEFT JOIN users_global_global u ON il.user_id = u.user_id
                 WHERE il.competition_id = ?
                 ORDER BY il.uses DESC
             """, (competition_id,)).fetchall()
@@ -99,15 +99,15 @@ def main():
         print("   📊 Comparação Pontos vs Usos:")
         discrepancies = []
         
-        all_users = set(participant_points.keys()) | set(link_uses.keys())
+        all_users_global = set(participant_points.keys()) | set(link_uses.keys())
         
-        for user_id in all_users:
+        for user_id in all_users_global:
             points = participant_points.get(user_id, 0)
             uses = link_uses.get(user_id, 0)
             
             # Buscar nome do usuário
             with db.get_connection() as conn:
-                user_row = conn.execute("SELECT username, first_name FROM users WHERE user_id = ?", (user_id,)).fetchone()
+                user_row = conn.execute("SELECT username, first_name FROM users_global_global WHERE user_id = ?", (user_id,)).fetchone()
                 user_name = user_row['first_name'] or user_row['username'] if user_row else f"ID:{user_id}"
             
             if points != uses:
@@ -135,11 +135,11 @@ def main():
             
             print(f"   📋 Tabelas relacionadas a membros: {[t['name'] for t in tables]}")
             
-            # Verificar logs recentes de invite_links
+            # Verificar logs recentes de invite_links_global
             recent_updates = conn.execute("""
                 SELECT il.*, u.first_name, u.username
-                FROM invite_links il
-                LEFT JOIN users u ON il.user_id = u.user_id
+                FROM invite_links_global_global il
+                LEFT JOIN users_global_global u ON il.user_id = u.user_id
                 WHERE il.last_used_at IS NOT NULL
                 ORDER BY il.last_used_at DESC
                 LIMIT 10
@@ -157,7 +157,7 @@ def main():
             print("   🔧 POSSÍVEIS CAUSAS:")
             print("      • Sistema de atualização de pontos não funcionando")
             print("      • Novos membros não sendo processados corretamente")
-            print("      • Falta de sincronização entre invite_links e competition_participants")
+            print("      • Falta de sincronização entre invite_links_global e competition_participants_global")
             
             print("\n   💡 SOLUÇÕES SUGERIDAS:")
             print("      1. Verificar handler de novos membros (_handle_new_member)")
@@ -168,7 +168,7 @@ def main():
         else:
             print("   ✅ SISTEMA FUNCIONANDO: Pontos e usos sincronizados")
         
-        print(f"\n✅ DIAGNÓSTICO CONCLUÍDO EM {datetime.now().strftime('%H:%M:%S')}")
+        print(f"\n✅ DIAGNÓSTICO CONCLUÍDO EM {TIMESTAMP WITH TIME ZONE.now().strftime('%H:%M:%S')}")
         
     except Exception as e:
         logger.error(f"❌ Erro no diagnóstico: {e}")

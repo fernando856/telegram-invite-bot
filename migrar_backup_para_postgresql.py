@@ -3,9 +3,9 @@
 Migrar Backup SQLite para PostgreSQL
 Restaura o backup bot_database_backup_20250826_075925.db para PostgreSQL
 """
-import sqlite3
+from sqlalchemy import create_engine, text
 import psycopg2
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 import os
 from dotenv import load_dotenv
 
@@ -29,7 +29,7 @@ def migrar_backup_para_postgresql():
         print(f"✅ Backup encontrado: {backup_file}")
         
         # Conectar SQLite (backup)
-        sqlite_conn = sqlite3.connect(backup_file)
+        sqlite_conn = postgresql_connection(backup_file)
         sqlite_conn.row_factory = sqlite3.Row
         sqlite_cursor = sqlite_conn.cursor()
         
@@ -48,7 +48,7 @@ def migrar_backup_para_postgresql():
         print(f"\n🔍 VERIFICANDO DADOS NO BACKUP...")
         
         # Verificar competições
-        sqlite_cursor.execute("SELECT * FROM competitions")
+        sqlite_cursor.execute("SELECT * FROM competitions_global_global")
         competicoes = sqlite_cursor.fetchall()
         print(f"   📊 {len(competicoes)} competições encontradas:")
         
@@ -58,7 +58,7 @@ def migrar_backup_para_postgresql():
         # Verificar participantes da competição 1
         sqlite_cursor.execute("""
             SELECT COUNT(*), SUM(invites_count) 
-            FROM competition_participants 
+            FROM competition_participants_global_global 
             WHERE competition_id = 1
         """)
         part_stats = sqlite_cursor.fetchone()
@@ -92,7 +92,7 @@ def migrar_backup_para_postgresql():
                     print(f"   ✏️ Renomeando competição 1: '{comp['name']}' → '{nome_final}'")
                 
                 pg_cursor.execute("""
-                    INSERT INTO competitions (id, name, description, start_date, end_date, target_invites, status, created_at)
+                    INSERT INTO competitions_global_global (id, name, description, start_date, end_date, target_invites, status, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         name = EXCLUDED.name,
@@ -122,14 +122,14 @@ def migrar_backup_para_postgresql():
         # 4. MIGRAR USUÁRIOS
         print(f"\n👤 MIGRANDO USUÁRIOS...")
         
-        sqlite_cursor.execute("SELECT * FROM users")
-        users = sqlite_cursor.fetchall()
+        sqlite_cursor.execute("SELECT * FROM users_global_global")
+        users_global = sqlite_cursor.fetchall()
         
-        migrated_users = 0
-        for user in users:
+        migrated_users_global = 0
+        for user in users_global:
             try:
                 pg_cursor.execute("""
-                    INSERT INTO users (user_id, username, first_name, last_name, created_at, updated_at)
+                    INSERT INTO users_global_global (user_id, username, first_name, last_name, created_at, updated_at)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     ON CONFLICT (user_id) DO UPDATE SET
                         username = EXCLUDED.username,
@@ -144,19 +144,19 @@ def migrar_backup_para_postgresql():
                     user['created_at'],
                     user['updated_at']
                 ))
-                migrated_users += 1
+                migrated_users_global += 1
             except Exception as e:
                 print(f"   ❌ Erro ao migrar user {user['user_id']}: {e}")
         
-        print(f"   ✅ {migrated_users} usuários migrados")
+        print(f"   ✅ {migrated_users_global} usuários migrados")
         
         # 5. MIGRAR PARTICIPANTES
         print(f"\n👥 MIGRANDO PARTICIPANTES...")
         
         sqlite_cursor.execute("""
             SELECT cp.*, u.username, u.first_name
-            FROM competition_participants cp
-            LEFT JOIN users u ON cp.user_id = u.user_id
+            FROM competition_participants_global_global cp
+            LEFT JOIN users_global_global u ON cp.user_id = u.user_id
             ORDER BY cp.competition_id, cp.invites_count DESC
         """)
         
@@ -168,7 +168,7 @@ def migrar_backup_para_postgresql():
         for part in participants:
             try:
                 pg_cursor.execute("""
-                    INSERT INTO competition_participants (id, competition_id, user_id, invites_count, position, joined_at, last_invite_at)
+                    INSERT INTO competition_participants_global_global (id, competition_id, user_id, invites_count, position, joined_at, last_invite_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         invites_count = EXCLUDED.invites_count,
@@ -200,7 +200,7 @@ def migrar_backup_para_postgresql():
         # 6. MIGRAR LINKS DE CONVITE
         print(f"\n📎 MIGRANDO LINKS DE CONVITE...")
         
-        sqlite_cursor.execute("SELECT * FROM invite_links")
+        sqlite_cursor.execute("SELECT * FROM invite_links_global_global")
         links = sqlite_cursor.fetchall()
         
         migrated_links = 0
@@ -209,7 +209,7 @@ def migrar_backup_para_postgresql():
         for link in links:
             try:
                 pg_cursor.execute("""
-                    INSERT INTO invite_links (id, user_id, competition_id, link, uses, max_uses, expire_date, created_at)
+                    INSERT INTO invite_links_global_global (id, user_id, competition_id, link, uses, max_uses, expire_date, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         uses = EXCLUDED.uses,
@@ -244,29 +244,29 @@ def migrar_backup_para_postgresql():
         print(f"\n🔍 VERIFICAÇÃO FINAL...")
         
         # Verificar competição principal
-        pg_cursor.execute("SELECT * FROM competitions WHERE id = 1")
+        pg_cursor.execute("SELECT * FROM competitions_global_global WHERE id = 1")
         comp_final = pg_cursor.fetchone()
         print(f"   ✅ Competição: {comp_final[1]} ({comp_final[6]})")
         
         # Verificar top usuários
         pg_cursor.execute("""
             SELECT u.username, u.first_name, cp.invites_count
-            FROM competition_participants cp
-            LEFT JOIN users u ON cp.user_id = u.user_id
+            FROM competition_participants_global_global cp
+            LEFT JOIN users_global_global u ON cp.user_id = u.user_id
             WHERE cp.competition_id = 1 AND cp.invites_count > 0
             ORDER BY cp.invites_count DESC
         """)
         
-        top_users = pg_cursor.fetchall()
+        top_users_global = pg_cursor.fetchall()
         print(f"   🏆 TOP USUÁRIOS RESTAURADOS:")
-        for user in top_users:
+        for user in top_users_global:
             username = user[0] or user[1] or "Usuário"
             print(f"      • @{username}: {user[2]} pontos")
         
         # Verificar totais finais
         pg_cursor.execute("""
             SELECT COUNT(*), SUM(invites_count) 
-            FROM competition_participants 
+            FROM competition_participants_global_global 
             WHERE competition_id = 1
         """)
         
@@ -274,7 +274,7 @@ def migrar_backup_para_postgresql():
         
         pg_cursor.execute("""
             SELECT COUNT(*), SUM(uses) 
-            FROM invite_links 
+            FROM invite_links_global_global 
             WHERE competition_id = 1
         """)
         

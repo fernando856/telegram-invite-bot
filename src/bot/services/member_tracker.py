@@ -1,13 +1,14 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Serviço para Rastrear Novos Membros
 Captura dados dos usuários que entram pelos links de convite
 """
 import logging
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 from typing import Optional, Dict, Any
 from telegram import User, ChatMemberUpdated
 
-from src.database.invited_users_model import invited_users_manager
+from src.database.invited_users_global_global_model import invited_users_global_global_manager
 from src.database.models import DatabaseManager
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 class MemberTracker:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
-        self.invited_users = invited_users_manager
+        self.invited_users_global_global = invited_users_global_global_manager
     
     async def track_new_member(self, update: ChatMemberUpdated, invite_link: str) -> bool:
         """Rastreia novo membro que entrou pelo link"""
@@ -36,7 +37,7 @@ class MemberTracker:
             user_data = self.extract_user_data(new_member)
             
             # Salvar no banco
-            success = self.invited_users.add_invited_user(
+            success = self.invited_users_global_global.add_invited_user(
                 inviter_user_id=inviter_user_id,
                 invited_user_id=new_member.id,
                 username=user_data['username'],
@@ -49,7 +50,7 @@ class MemberTracker:
             if success:
                 logger.info(f"✅ Novo membro rastreado: {user_data['display_name']} convidado por {inviter_user_id}")
                 
-                # Atualizar também na tabela users se não existir
+                # Atualizar também na tabela users_global se não existir
                 self.ensure_user_exists(new_member)
                 
                 return True
@@ -65,9 +66,9 @@ class MemberTracker:
         """Busca o dono do link de convite"""
         try:
             with self.db.get_connection() as conn:
-                cursor = conn.execute("""
+                cursor = session.execute(text(text("""
                     SELECT user_id, competition_id 
-                    FROM invite_links 
+                    FROM invite_links_global_global_global 
                     WHERE invite_link = ?
                 """, (invite_link,))
                 
@@ -101,15 +102,15 @@ class MemberTracker:
         }
     
     def ensure_user_exists(self, user: User) -> bool:
-        """Garante que o usuário existe na tabela users"""
+        """Garante que o usuário existe na tabela users_global_global"""
         try:
             with self.db.get_connection() as conn:
-                conn.execute("""
-                    INSERT OR IGNORE INTO users 
+                session.execute(text(text("""
+                    INSERT OR IGNORE INTO users_global_global_global 
                     (user_id, username, first_name, last_name, created_at)
                     VALUES (?, ?, ?, ?, ?)
                 """, (user.id, user.username, user.first_name, 
-                      user.last_name, datetime.now()))
+                      user.last_name, TIMESTAMP WITH TIME ZONE.now()))
                 
                 return True
                 
@@ -117,29 +118,29 @@ class MemberTracker:
             logger.error(f"❌ Erro ao garantir usuário existe: {e}")
             return False
     
-    def get_invited_users_for_display(self, inviter_user_id: int, 
+    def get_invited_users_global_global_for_display(self, inviter_user_id: int, 
                                     competition_id: int = None) -> Dict[str, Any]:
         """Retorna dados formatados dos usuários convidados"""
         try:
             # Buscar usuários convidados
-            invited_users = self.invited_users.get_invited_users_by_inviter(
+            invited_users_global_global = self.invited_users_global_global.get_invited_users_global_global_by_inviter(
                 inviter_user_id, competition_id
             )
             
             # Contar total
-            total_count = len(invited_users)
+            total_count = len(invited_users_global_global)
             
             # Formatar lista
             formatted_list = []
-            for i, user in enumerate(invited_users, 1):
-                display_name = self.invited_users.format_user_display_name(user)
+            for i, user in enumerate(invited_users_global_global, 1):
+                display_name = self.invited_users_global_global.format_user_display_name(user)
                 joined_date = user.get('joined_at', '')
                 
                 # Formatar data
                 if joined_date:
                     try:
                         if isinstance(joined_date, str):
-                            date_obj = datetime.fromisoformat(joined_date.replace('Z', '+00:00'))
+                            date_obj = TIMESTAMP WITH TIME ZONE.fromisoformat(joined_date.replace('Z', '+00:00'))
                         else:
                             date_obj = joined_date
                         formatted_date = date_obj.strftime("%d/%m/%Y às %H:%M")
@@ -151,7 +152,7 @@ class MemberTracker:
             
             return {
                 'total_count': total_count,
-                'users_list': formatted_list,
+                'users_global_global_list': formatted_list,
                 'has_real_data': total_count > 0
             }
             
@@ -159,7 +160,7 @@ class MemberTracker:
             logger.error(f"❌ Erro ao buscar usuários para exibição: {e}")
             return {
                 'total_count': 0,
-                'users_list': [],
+                'users_global_global_list': [],
                 'has_real_data': False
             }
 

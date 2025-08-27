@@ -47,7 +47,7 @@ def diagnosticar_postgresql():
             print("   ❌ Nenhuma tabela encontrada!")
         
         # Verificar tabelas específicas que precisamos
-        tabelas_necessarias = ['competitions', 'competition_participants', 'invite_links', 'users']
+        tabelas_necessarias = ['competitions_global', 'competition_participants_global', 'invite_links_global', 'users_global']
         
         print(f"\n🔍 VERIFICANDO TABELAS NECESSÁRIAS:")
         for tabela in tabelas_necessarias:

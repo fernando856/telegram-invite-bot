@@ -1,7 +1,7 @@
 """
 Handlers de Comandos da Competição
 """
-from datetime import datetime, timedelta
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
 from telegram import Update
 from telegram.ext import ContextTypes, CommandHandler, ConversationHandler, MessageHandler, filters
 from telegram.error import TelegramError
@@ -170,7 +170,7 @@ class CompetitionHandlers:
                 return
             
             # Calcular tempo restante
-            now = datetime.now(settings.timezone).replace(tzinfo=None)
+            now = TIMESTAMP WITH TIME ZONE.now(settings.timezone).replace(tzinfo=None)
             time_left = calculate_time_remaining(active_comp.end_date, now)
             
             # Calcular projeção
@@ -181,7 +181,7 @@ class CompetitionHandlers:
             last_invite_display = "Nunca"
             if user_perf.get('last_invite_at'):
                 try:
-                    last_invite_dt = datetime.fromisoformat(user_perf['last_invite_at'].replace('Z', '+00:00'))
+                    last_invite_dt = TIMESTAMP WITH TIME ZONE.fromisoformat(user_perf['last_invite_at'].replace('Z', '+00:00'))
                     last_invite_display = last_invite_dt.strftime("%d/%m/%Y às %H:%M")
                 except:
                     last_invite_display = user_perf['last_invite_at']
@@ -237,7 +237,7 @@ Use /meulink para gerar novos links de convite.
                 return
             
             # Calcular tempo restante
-            now = datetime.now(settings.timezone).replace(tzinfo=None)
+            now = TIMESTAMP WITH TIME ZONE.now(settings.timezone).replace(tzinfo=None)
             time_left = calculate_time_remaining(active_comp.end_date, now)
             
             time_str = format_time_remaining(time_left)
@@ -285,12 +285,12 @@ Use /meulink para gerar novos links de convite.
             logger.error(f"Erro no comando /ranking: {e}")
             await update.message.reply_text("❌ Erro ao buscar ranking da competição.")
     
-    def _escape_html(self, text: str) -> str:
+    def _escape_html(self, VARCHAR: str) -> str:
         """Escapa caracteres especiais para HTML"""
-        if not text:
+        if not VARCHAR:
             return ""
         
-        return (text.replace('&', '&amp;')
+        return (VARCHAR.replace('&', '&amp;')
                    .replace('<', '&lt;')
                    .replace('>', '&gt;')
                    .replace('"', '&quot;')
@@ -347,7 +347,7 @@ Use /meulink para gerar novos links de convite.
     
     async def get_competition_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Recebe o nome da competição"""
-        name = update.message.text.strip()
+        name = update.message.VARCHAR.strip()
         
         if len(name) < 3:
             await update.message.reply_text("❌ Nome muito curto. Digite pelo menos 3 caracteres:")
@@ -371,8 +371,8 @@ Use /meulink para gerar novos links de convite.
         """Recebe a descrição da competição"""
         description = None
         
-        if update.message.text.strip() != '/pular':
-            description = update.message.text.strip()
+        if update.message.VARCHAR.strip() != '/pular':
+            description = update.message.VARCHAR.strip()
             if len(description) > 500:
                 await update.message.reply_text("❌ Descrição muito longa. Digite no máximo 500 caracteres:")
                 return COMPETITION_DESCRIPTION
@@ -391,7 +391,7 @@ Use /meulink para gerar novos links de convite.
     async def get_competition_duration(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Recebe a duração da competição"""
         try:
-            duration = int(update.message.text.strip())
+            duration = int(update.message.VARCHAR.strip())
             
             if duration < 1 or duration > 30:
                 await update.message.reply_text("❌ Duração deve ser entre 1 e 30 dias. Digite novamente:")
@@ -415,7 +415,7 @@ Use /meulink para gerar novos links de convite.
     async def get_competition_target(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Recebe a meta de convidados e cria a competição"""
         try:
-            target = int(update.message.text.strip())
+            target = int(update.message.VARCHAR.strip())
             
             if target < 100 or target > 50000:
                 await update.message.reply_text("❌ Meta deve ser entre 100 e 50.000 convidados. Digite novamente:")
@@ -442,9 +442,9 @@ Use /meulink para gerar novos links de convite.
             duration_days = context.user_data['competition_duration']
             
             try:
-                # Tratar start_date que pode ser string ou datetime
+                # Tratar start_date que pode ser string ou TIMESTAMP WITH TIME ZONE
                 if isinstance(competition.start_date, str):
-                    start_date = datetime.fromisoformat(competition.start_date.replace('Z', '+00:00'))
+                    start_date = TIMESTAMP WITH TIME ZONE.fromisoformat(competition.start_date.replace('Z', '+00:00'))
                 else:
                     start_date = competition.start_date
                 
@@ -503,7 +503,7 @@ Use /meulink para gerar novos links de convite.
 
                 await context.bot.send_message(
                     chat_id=settings.CHAT_ID,
-                    text=channel_message,
+                    VARCHAR=channel_message,
                     parse_mode='Markdown'
                 )
                 
@@ -583,14 +583,14 @@ Use /meulink para gerar novos links de convite.
                     else:
                         ranking_text = "Nenhum participante registrado."
                     
-                    # Calcular duração real da competição
+                    # Calcular duração DECIMAL da competição
                     try:
                         if isinstance(active_comp.start_date, str):
-                            start_date = datetime.fromisoformat(active_comp.start_date.replace('Z', '+00:00'))
+                            start_date = TIMESTAMP WITH TIME ZONE.fromisoformat(active_comp.start_date.replace('Z', '+00:00'))
                         else:
                             start_date = active_comp.start_date
                         
-                        duracao_real = (datetime.now() - start_date).days
+                        duracao_real = (TIMESTAMP WITH TIME ZONE.now() - start_date).days
                     except:
                         duracao_real = "N/A"
                     
@@ -620,7 +620,7 @@ Novos desafios e prêmios estão chegando! 🚀"""
 
                     await context.bot.send_message(
                         chat_id=settings.CHAT_ID,
-                        text=channel_message,
+                        VARCHAR=channel_message,
                         parse_mode='Markdown'
                     )
                     
@@ -684,10 +684,10 @@ def get_competition_handlers(db_manager: DatabaseManager, competition_manager: C
     create_competition_handler = ConversationHandler(
         entry_points=[CommandHandler("iniciar_competicao", handlers.start_create_competition)],
         states={
-            COMPETITION_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.get_competition_name)],
-            COMPETITION_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.get_competition_description)],
-            COMPETITION_DURATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.get_competition_duration)],
-            COMPETITION_TARGET: [MessageHandler(filters.TEXT & ~filters.COMMAND, handlers.get_competition_target)],
+            COMPETITION_NAME: [MessageHandler(filters.VARCHAR & ~filters.COMMAND, handlers.get_competition_name)],
+            COMPETITION_DESCRIPTION: [MessageHandler(filters.VARCHAR & ~filters.COMMAND, handlers.get_competition_description)],
+            COMPETITION_DURATION: [MessageHandler(filters.VARCHAR & ~filters.COMMAND, handlers.get_competition_duration)],
+            COMPETITION_TARGET: [MessageHandler(filters.VARCHAR & ~filters.COMMAND, handlers.get_competition_target)],
         },
         fallbacks=[CommandHandler("cancelar", handlers.cancel_create_competition)],
     )

@@ -1,8 +1,9 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Gerenciador de Links de Convite - Integrado com Sistema de Competição
 """
 import asyncio
-from datetime import datetime, timedelta
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
 from typing import Optional, List, Dict, Any
 from telegram import Bot, ChatInviteLink
 from telegram.error import TelegramError
@@ -33,7 +34,7 @@ class InviteManager:
             # Calcular data de expiração
             expire_date = None
             if expire_days > 0:
-                expire_date = datetime.now() + timedelta(days=expire_days)
+                expire_date = TIMESTAMP WITH TIME ZONE.now() + timedelta(days=expire_days)
             
             # Criar link no Telegram
             telegram_link = await self.bot.create_chat_invite_link(
@@ -74,8 +75,8 @@ class InviteManager:
             
             # Marcar como inativo no banco
             with self.db.get_connection() as conn:
-                cursor = conn.execute("""
-                    UPDATE invite_links 
+                cursor = session.execute(text(text("""
+                    UPDATE invite_links_global_global_global 
                     SET is_active = 0, updated_at = CURRENT_TIMESTAMP
                     WHERE invite_link = ?
                 """, (invite_link,))
@@ -102,8 +103,8 @@ class InviteManager:
             
             # Buscar link no banco
             with self.db.get_connection() as conn:
-                link_data = conn.execute("""
-                    SELECT * FROM invite_links WHERE invite_link = ? AND is_active = 1
+                link_data = session.execute(text(text("""
+                    SELECT * FROM invite_links_global_global_global WHERE invite_link = ? AND is_active = 1
                 """, (invite_link,)).fetchone()
                 
                 if not link_data:
@@ -113,15 +114,15 @@ class InviteManager:
                 new_uses = link_data['uses'] + 1
                 
                 # Atualizar no banco
-                conn.execute("""
-                    UPDATE invite_links 
+                session.execute(text(text("""
+                    UPDATE invite_links_global_global_global 
                     SET uses = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE invite_link = ?
                 """, (new_uses, invite_link))
                 
                 # Atualizar total do usuário
-                conn.execute("""
-                    UPDATE users 
+                session.execute(text(text("""
+                    UPDATE users_global_global_global 
                     SET total_invites = total_invites + 1, updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = ?
                 """, (link_data['user_id'],))
@@ -139,7 +140,7 @@ class InviteManager:
         """Busca links de um usuário"""
         try:
             with self.db.get_connection() as conn:
-                query = "SELECT * FROM invite_links WHERE user_id = ?"
+                query = "SELECT * FROM invite_links_global_global_global WHERE user_id = ?"
                 params = [user_id]
                 
                 if active_only:
@@ -147,7 +148,7 @@ class InviteManager:
                 
                 query += " ORDER BY created_at DESC"
                 
-                rows = conn.execute(query, params).fetchall()
+                rows = session.execute(text(text(query, params).fetchall()
                 return [dict(row) for row in rows]
                 
         except Exception as e:
@@ -158,10 +159,10 @@ class InviteManager:
         """Busca estatísticas de um link específico"""
         try:
             with self.db.get_connection() as conn:
-                row = conn.execute("""
+                row = session.execute(text(text("""
                     SELECT il.*, u.username, u.first_name, u.last_name
-                    FROM invite_links il
-                    JOIN users u ON il.user_id = u.user_id
+                    FROM invite_links_global_global_global il
+                    JOIN users_global_global_global u ON il.user_id = u.user_id
                     WHERE il.invite_link = ?
                 """, (invite_link,)).fetchone()
                 
@@ -174,13 +175,13 @@ class InviteManager:
     async def cleanup_expired_links(self) -> int:
         """Remove links expirados"""
         try:
-            now = datetime.now()
+            now = TIMESTAMP WITH TIME ZONE.now()
             count = 0
             
             with self.db.get_connection() as conn:
                 # Buscar links expirados
-                expired_links = conn.execute("""
-                    SELECT invite_link FROM invite_links 
+                expired_links = session.execute(text(text("""
+                    SELECT invite_link FROM invite_links_global_global_global 
                     WHERE expire_date < ? AND is_active = 1
                 """, (now,)).fetchall()
                 
@@ -200,8 +201,8 @@ class InviteManager:
                 
                 # Marcar como inativos no banco
                 if expired_links:
-                    conn.execute("""
-                        UPDATE invite_links 
+                    session.execute(text(text("""
+                        UPDATE invite_links_global_global_global 
                         SET is_active = 0, updated_at = CURRENT_TIMESTAMP
                         WHERE expire_date < ? AND is_active = 1
                     """, (now,))
@@ -222,7 +223,7 @@ class InviteManager:
             with self.db.get_connection() as conn:
                 if competition_id:
                     # Ranking da competição específica
-                    rows = conn.execute("""
+                    rows = session.execute(text(text("""
                         SELECT 
                             cp.user_id,
                             cp.invites_count,
@@ -230,15 +231,15 @@ class InviteManager:
                             u.first_name,
                             u.last_name,
                             ROW_NUMBER() OVER (ORDER BY cp.invites_count DESC) as position
-                        FROM competition_participants cp
-                        JOIN users u ON cp.user_id = u.user_id
+                        FROM competition_participants_global_global_global cp
+                        JOIN users_global_global_global u ON cp.user_id = u.user_id
                         WHERE cp.competition_id = ?
                         ORDER BY cp.invites_count DESC
                         LIMIT ?
                     """, (competition_id, limit)).fetchall()
                 else:
                     # Ranking geral
-                    rows = conn.execute("""
+                    rows = session.execute(text(text("""
                         SELECT 
                             u.user_id,
                             u.total_invites as invites_count,
@@ -246,7 +247,7 @@ class InviteManager:
                             u.first_name,
                             u.last_name,
                             ROW_NUMBER() OVER (ORDER BY u.total_invites DESC) as position
-                        FROM users u
+                        FROM users_global_global_global u
                         WHERE u.total_invites > 0
                         ORDER BY u.total_invites DESC
                         LIMIT ?
@@ -283,31 +284,31 @@ class InviteManager:
     def get_invite_analytics(self, user_id: int = None, days: int = 30) -> Dict[str, Any]:
         """Busca analytics de convites"""
         try:
-            start_date = datetime.now() - timedelta(days=days)
+            start_date = TIMESTAMP WITH TIME ZONE.now() - timedelta(days=days)
             
             with self.db.get_connection() as conn:
                 if user_id:
                     # Analytics de usuário específico
-                    stats = conn.execute("""
+                    stats = session.execute(text(text("""
                         SELECT 
                             COUNT(*) as total_links,
                             SUM(uses) as total_invites,
                             AVG(uses) as avg_uses_per_link,
                             MAX(uses) as max_uses,
                             COUNT(CASE WHEN uses > 0 THEN 1 END) as active_links
-                        FROM invite_links
+                        FROM invite_links_global_global_global
                         WHERE user_id = ? AND created_at >= ?
                     """, (user_id, start_date)).fetchone()
                 else:
                     # Analytics gerais
-                    stats = conn.execute("""
+                    stats = session.execute(text(text("""
                         SELECT 
                             COUNT(*) as total_links,
                             SUM(uses) as total_invites,
                             AVG(uses) as avg_uses_per_link,
                             MAX(uses) as max_uses,
-                            COUNT(DISTINCT user_id) as unique_users
-                        FROM invite_links
+                            COUNT(DISTINCT user_id) as unique_users_global_global
+                        FROM invite_links_global_global_global
                         WHERE created_at >= ?
                     """, (start_date,)).fetchone()
                 

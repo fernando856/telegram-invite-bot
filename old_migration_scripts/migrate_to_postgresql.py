@@ -3,11 +3,11 @@
 Script de migração de SQLite para PostgreSQL
 """
 
-import sqlite3
+from sqlalchemy import create_engine, text
 import psycopg2
 import psycopg2.extras
 import os
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 from dotenv import load_dotenv
 
 # Carregar variáveis de ambiente
@@ -19,7 +19,7 @@ def migrate_sqlite_to_postgresql():
     print("🔄 Iniciando migração SQLite → PostgreSQL...")
     
     # Conectar ao SQLite
-    sqlite_conn = sqlite3.connect('bot_database.db')
+    sqlite_conn = postgresql_connection('bot_postgresql://user:pass@localhost/dbname')
     sqlite_conn.row_factory = sqlite3.Row
     sqlite_cursor = sqlite_conn.cursor()
     
@@ -38,12 +38,12 @@ def migrate_sqlite_to_postgresql():
     try:
         # Migrar usuários
         print("👥 Migrando usuários...")
-        sqlite_cursor.execute("SELECT * FROM users")
-        users = sqlite_cursor.fetchall()
+        sqlite_cursor.execute("SELECT * FROM users_global_global")
+        users_global = sqlite_cursor.fetchall()
         
-        for user in users:
+        for user in users_global:
             pg_cursor.execute("""
-                INSERT INTO users (user_id, username, first_name, last_name, is_active, created_at, updated_at)
+                INSERT INTO users_global_global (user_id, username, first_name, last_name, is_active, created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (user_id) DO NOTHING
             """, (
@@ -51,18 +51,18 @@ def migrate_sqlite_to_postgresql():
                 user['last_name'], user['is_active'], user['created_at'], user['updated_at']
             ))
         
-        print(f"✅ {len(users)} usuários migrados")
+        print(f"✅ {len(users_global)} usuários migrados")
         
         # Migrar competições
         print("🏆 Migrando competições...")
-        sqlite_cursor.execute("SELECT * FROM competitions")
-        competitions = sqlite_cursor.fetchall()
+        sqlite_cursor.execute("SELECT * FROM competitions_global_global")
+        competitions_global = sqlite_cursor.fetchall()
         
         competition_id_map = {}  # Mapear IDs antigos para novos
         
-        for comp in competitions:
+        for comp in competitions_global:
             pg_cursor.execute("""
-                INSERT INTO competitions (name, description, start_date, end_date, target_invites, 
+                INSERT INTO competitions_global_global (name, description, start_date, end_date, target_invites, 
                                         status, winner_user_id, total_participants, total_invites, 
                                         created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -76,18 +76,18 @@ def migrate_sqlite_to_postgresql():
             new_id = pg_cursor.fetchone()[0]
             competition_id_map[comp['id']] = new_id
         
-        print(f"✅ {len(competitions)} competições migradas")
+        print(f"✅ {len(competitions_global)} competições migradas")
         
         # Migrar participantes de competição
         print("👤 Migrando participantes...")
-        sqlite_cursor.execute("SELECT * FROM competition_participants")
+        sqlite_cursor.execute("SELECT * FROM competition_participants_global_global")
         participants = sqlite_cursor.fetchall()
         
         for participant in participants:
             new_comp_id = competition_id_map.get(participant['competition_id'])
             if new_comp_id:
                 pg_cursor.execute("""
-                    INSERT INTO competition_participants (competition_id, user_id, invites_count, 
+                    INSERT INTO competition_participants_global_global (competition_id, user_id, invites_count, 
                                                         position, last_invite_at, joined_at)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     ON CONFLICT (competition_id, user_id) DO NOTHING
@@ -100,30 +100,30 @@ def migrate_sqlite_to_postgresql():
         
         # Migrar links de convite
         print("🔗 Migrando links de convite...")
-        sqlite_cursor.execute("SELECT * FROM invite_links")
-        invite_links = sqlite_cursor.fetchall()
+        sqlite_cursor.execute("SELECT * FROM invite_links_global_global")
+        invite_links_global = sqlite_cursor.fetchall()
         
         link_id_map = {}  # Mapear IDs antigos para novos
         
-        for link in invite_links:
+        for link in invite_links_global:
             new_comp_id = competition_id_map.get(link['competition_id']) if link['competition_id'] else None
             
             pg_cursor.execute("""
-                INSERT INTO invite_links (user_id, invite_link, name, max_uses, current_uses,
+                INSERT INTO invite_links_global_global (user_id, invite_link, name, max_uses, uses,
                                         expire_date, is_active, points_awarded, competition_id,
                                         created_at, updated_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (
                 link['user_id'], link['invite_link'], link['name'], link['max_uses'],
-                link['current_uses'], link['expire_date'], link['is_active'],
+                link['uses'], link['expire_date'], link['is_active'],
                 link['points_awarded'], new_comp_id, link['created_at'], link['updated_at']
             ))
             
             new_id = pg_cursor.fetchone()[0]
             link_id_map[link['id']] = new_id
         
-        print(f"✅ {len(invite_links)} links de convite migrados")
+        print(f"✅ {len(invite_links_global)} links de convite migrados")
         
         # Migrar convites (se a tabela existir)
         try:
@@ -155,24 +155,24 @@ def migrate_sqlite_to_postgresql():
         
         print("🎉 Migração concluída com sucesso!")
         print("\n📊 Resumo:")
-        print(f"   👥 Usuários: {len(users)}")
-        print(f"   🏆 Competições: {len(competitions)}")
+        print(f"   👥 Usuários: {len(users_global)}")
+        print(f"   🏆 Competições: {len(competitions_global)}")
         print(f"   👤 Participantes: {len(participants)}")
-        print(f"   🔗 Links de convite: {len(invite_links)}")
+        print(f"   🔗 Links de convite: {len(invite_links_global)}")
         
         # Verificar dados migrados
         print("\n🔍 Verificando migração...")
-        pg_cursor.execute("SELECT COUNT(*) FROM users")
-        users_count = pg_cursor.fetchone()[0]
+        pg_cursor.execute("SELECT COUNT(*) FROM users_global_global")
+        users_global_count = pg_cursor.fetchone()[0]
         
-        pg_cursor.execute("SELECT COUNT(*) FROM competitions")
+        pg_cursor.execute("SELECT COUNT(*) FROM competitions_global_global")
         comp_count = pg_cursor.fetchone()[0]
         
-        pg_cursor.execute("SELECT COUNT(*) FROM invite_links")
+        pg_cursor.execute("SELECT COUNT(*) FROM invite_links_global_global")
         links_count = pg_cursor.fetchone()[0]
         
         print(f"✅ PostgreSQL contém:")
-        print(f"   👥 {users_count} usuários")
+        print(f"   👥 {users_global_count} usuários")
         print(f"   🏆 {comp_count} competições")
         print(f"   🔗 {links_count} links de convite")
         

@@ -4,7 +4,7 @@ Script de Recuperação de Emergência - PostgreSQL
 Recupera dados perdidos no banco PostgreSQL
 """
 import psycopg2
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 import os
 from dotenv import load_dotenv
 
@@ -43,7 +43,7 @@ def recuperar_dados_postgresql():
         print("✅ Conectado ao PostgreSQL")
         
         # Buscar competição ativa
-        cursor.execute("SELECT id FROM competitions WHERE status = 'active'")
+        cursor.execute(text("SELECT id FROM competitions_global_global WHERE status = 'active'")
         comp_row = cursor.fetchone()
         
         if not comp_row:
@@ -59,38 +59,38 @@ def recuperar_dados_postgresql():
         for user_id, pontos_esperados in dados_perdidos.items():
             try:
                 # Verificar situação atual do usuário
-                cursor.execute("""
+                cursor.execute(text("""
                     SELECT 
                         COALESCE(SUM(il.uses), 0) as total_uses,
                         COALESCE(cp.invites_count, 0) as current_points
-                    FROM invite_links il
-                    LEFT JOIN competition_participants cp ON il.user_id = cp.user_id AND il.competition_id = cp.competition_id
+                    FROM invite_links_global_global il
+                    LEFT JOIN competition_participants_global_global cp ON il.user_id = cp.user_id AND il.competition_id = cp.competition_id
                     WHERE il.user_id = %s AND il.competition_id = %s
                 """, (user_id, competition_id))
                 
                 result = cursor.fetchone()
-                current_uses = result[0] if result else 0
+                uses = result[0] if result else 0
                 current_points = result[1] if result else 0
                 
                 print(f"\n👤 User {user_id}:")
-                print(f"   • Usos atuais: {current_uses}")
+                print(f"   • Usos atuais: {uses}")
                 print(f"   • Pontos atuais: {current_points}")
                 print(f"   • Pontos esperados: {pontos_esperados}")
                 
                 if current_points < pontos_esperados:
                     # Atualizar uses no link
-                    cursor.execute("""
-                        UPDATE invite_links 
+                    cursor.execute(text("""
+                        UPDATE invite_links_global_global 
                         SET uses = %s 
                         WHERE user_id = %s AND competition_id = %s
                     """, (pontos_esperados, user_id, competition_id))
                     
                     # Atualizar pontos do participante
-                    cursor.execute("""
-                        UPDATE competition_participants 
+                    cursor.execute(text("""
+                        UPDATE competition_participants_global_global 
                         SET invites_count = %s, last_invite_at = %s
                         WHERE user_id = %s AND competition_id = %s
-                    """, (pontos_esperados, datetime.now(), user_id, competition_id))
+                    """, (pontos_esperados, TIMESTAMP WITH TIME ZONE.now(), user_id, competition_id))
                     
                     print(f"   ✅ Recuperado: {current_points} → {pontos_esperados} pontos")
                     recuperados += 1
@@ -138,9 +138,9 @@ def verificar_resultado_postgresql():
         print("=" * 40)
         
         # Verificar participantes
-        cursor.execute("""
+        cursor.execute(text("""
             SELECT user_id, invites_count, competition_id 
-            FROM competition_participants 
+            FROM competition_participants_global_global 
             WHERE invites_count > 0 
             ORDER BY invites_count DESC
         """)
@@ -152,9 +152,9 @@ def verificar_resultado_postgresql():
             total_recovered += row[1]
         
         # Verificar links
-        cursor.execute("""
+        cursor.execute(text("""
             SELECT user_id, uses, competition_id 
-            FROM invite_links 
+            FROM invite_links_global_global 
             WHERE uses > 0 
             ORDER BY uses DESC
         """)
@@ -182,7 +182,7 @@ def criar_backup_postgresql():
         print("\n💾 CRIANDO BACKUP ANTES DA RECUPERAÇÃO...")
         
         # Usar pg_dump para criar backup
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = TIMESTAMP WITH TIME ZONE.now().strftime("%Y%m%d_%H%M%S")
         backup_file = f"backup_pre_recovery_{timestamp}.sql"
         
         os.system(f"pg_dump -h localhost -U bot_user -d telegram_bot > {backup_file}")

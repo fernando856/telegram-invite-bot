@@ -4,7 +4,7 @@ Inclui validação de estado e correção de problemas
 """
 
 import logging
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 from telegram import Update
 from telegram.ext import ContextTypes, CommandHandler
 from telegram.error import TelegramError
@@ -40,7 +40,7 @@ class AdminHandlers:
                 return
             
             # Validar e corrigir estado do sistema
-            validation_report = self.state_validator.validate_and_fix_competitions()
+            validation_report = self.state_validator.validate_and_fix_competitions_global_global()
             
             # Obter saúde do sistema
             health = self.state_validator.get_system_health()
@@ -66,7 +66,7 @@ class AdminHandlers:
             # Saúde do sistema
             status_msg += f"💚 **Saúde do Sistema:** {health['overall_status'].upper()}\n"
             status_msg += f"🗄️ **Banco de Dados:** {health['database_status']}\n"
-            status_msg += f"👥 **Total de Usuários:** {health['users'].get('total', 0):,}\n\n"
+            status_msg += f"👥 **Total de Usuários:** {health['users_global_global'].get('total', 0):,}\n\n"
             
             # Estatísticas de performance
             status_msg += "⚡ **Performance:**\n"
@@ -106,7 +106,7 @@ class AdminHandlers:
                 return
             
             # Validar estado antes de finalizar
-            validation_report = self.state_validator.validate_and_fix_competitions()
+            validation_report = self.state_validator.validate_and_fix_competitions_global_global()
             
             # Buscar competição ativa após validação
             active_comp = self.comp_manager.get_active_competition()
@@ -130,7 +130,7 @@ class AdminHandlers:
                 
                 msg = f"✅ **Competição finalizada com sucesso!**\n\n"
                 msg += f"🏆 **Competição:** {getattr(active_comp, 'name', 'N/A')}\n"
-                msg += f"📅 **Finalizada em:** {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
+                msg += f"📅 **Finalizada em:** {TIMESTAMP WITH TIME ZONE.now().strftime('%d/%m/%Y %H:%M')}\n"
                 msg += f"👤 **Finalizada por:** {user.first_name}\n\n"
                 msg += "🎯 Use /iniciar_competicao para criar uma nova competição."
                 
@@ -166,7 +166,7 @@ class AdminHandlers:
                 return
             
             # Executar reset forçado
-            reset_report = self.state_validator.force_reset_competitions()
+            reset_report = self.state_validator.force_reset_competitions_global_global()
             
             # Limpar cache
             self.performance_optimizer.cache.clear()
@@ -176,7 +176,7 @@ class AdminHandlers:
             self.performance_optimizer.db_optimizer.optimize_database()
             
             msg = "🔄 **RESET COMPLETO EXECUTADO**\n\n"
-            msg += f"🏆 Competições resetadas: {reset_report['competitions_reset']}\n"
+            msg += f"🏆 Competições resetadas: {reset_report['competitions_global_global_reset']}\n"
             msg += f"👥 Participantes removidos: {reset_report['participants_removed']}\n"
             msg += f"🔗 Links resetados: {reset_report['links_reset']}\n\n"
             msg += "✅ Sistema limpo e otimizado.\n"
@@ -263,11 +263,11 @@ class AdminHandlers:
             
             # Competições
             msg += "🏆 *Competições:*\n"
-            for status, count in health['competitions'].items():
+            for status, count in health['competitions_global_global'].items():
                 msg += f"• {status}: {count}\n"
             
             # Usuários
-            msg += f"\n👥 *Usuários:* {health['users'].get('total', 0):,}\n\n"
+            msg += f"\n👥 *Usuários:* {health['users_global_global'].get('total', 0):,}\n\n"
             
             # Links
             msg += "🔗 *Links de Convite:*\n"

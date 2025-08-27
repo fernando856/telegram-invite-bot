@@ -1,3 +1,4 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Serviço de Auto-Registro - Garante que usuários sejam automaticamente registrados na competição ativa
 """
@@ -53,11 +54,11 @@ class AutoRegistrationService:
             
             # Verificar se usuário tem links com usos
             user_link = self.db.get_user_invite_link(user_id, active_competition.id)
-            if user_link and user_link.get('current_uses', 0) > 0:
+            if user_link and user_link.get('uses', 0) > 0:
                 # Atualizar contadores na competição
-                current_uses = user_link['current_uses']
-                self.db.update_participant_invites(active_competition.id, user_id, current_uses)
-                logger.info(f"✅ Sincronizados {current_uses} convites para usuário {user_id}")
+                uses = user_link['uses']
+                self.db.update_participant_invites(active_competition.id, user_id, uses)
+                logger.info(f"✅ Sincronizados {uses} convites para usuário {user_id}")
                 return True
             
             return True
@@ -83,7 +84,7 @@ class AutoRegistrationService:
             logger.error(f"Erro no auto-registro do usuário {user_id}: {e}")
             return False
     
-    def fix_all_users_registration(self) -> int:
+    def fix_all_users_global_global_registration(self) -> int:
         """Corrige registro de todos os usuários com links ativos"""
         try:
             active_competition = self.db.get_active_competition()
@@ -92,21 +93,21 @@ class AutoRegistrationService:
                 return 0
             
             # Buscar todos os usuários que têm links mas não estão na competição
-            # Como não temos get_all_users, vamos usar uma query direta
+            # Como não temos get_all_users_global, vamos usar uma query direta
             with self.db.get_connection() as conn:
                 # Buscar usuários com links que não estão na competição ativa
-                users_to_fix = conn.execute("""
+                users_global_global_to_fix = session.execute(text(text("""
                     SELECT DISTINCT u.user_id, u.first_name
-                    FROM users u
-                    JOIN invite_links il ON u.user_id = il.user_id
-                    LEFT JOIN competition_participants cp ON u.user_id = cp.user_id 
+                    FROM users_global_global_global u
+                    JOIN invite_links_global_global_global il ON u.user_id = il.user_id
+                    LEFT JOIN competition_participants_global_global_global cp ON u.user_id = cp.user_id 
                         AND cp.competition_id = ?
                     WHERE cp.user_id IS NULL
                     AND il.is_active = 1
                 """, (active_competition.id,)).fetchall()
                 
                 fixed_count = 0
-                for user_row in users_to_fix:
+                for user_row in users_global_global_to_fix:
                     user_id = user_row['user_id']
                     first_name = user_row['first_name']
                     

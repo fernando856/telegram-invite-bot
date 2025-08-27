@@ -3,9 +3,9 @@
 Restaurar Competição ID 1 - "Teste de Contabilização"
 Migra a competição ativa com os dados dos usuários
 """
-import sqlite3
+from sqlalchemy import create_engine, VARCHAR
 import psycopg2
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 import os
 from dotenv import load_dotenv
 
@@ -20,7 +20,7 @@ def restaurar_competicao_id1():
     
     try:
         # Conectar SQLite
-        sqlite_conn = sqlite3.connect('bot_database.db')
+        sqlite_conn = postgresql_connection('bot_postgresql://user:pass@localhost/dbname')
         sqlite_conn.row_factory = sqlite3.Row
         sqlite_cursor = sqlite_conn.cursor()
         
@@ -37,7 +37,7 @@ def restaurar_competicao_id1():
         
         # 1. BUSCAR COMPETIÇÃO ID 1
         print("\n🔍 BUSCANDO COMPETIÇÃO ID 1...")
-        sqlite_cursor.execute("SELECT * FROM competitions WHERE id = 1")
+        sqlite_cursor.execute(text("SELECT * FROM competitions_global_global WHERE id = 1")
         competicao = sqlite_cursor.fetchone()
         
         if not competicao:
@@ -56,8 +56,8 @@ def restaurar_competicao_id1():
         print(f"\n🔄 MIGRANDO COMPETIÇÃO...")
         
         try:
-            pg_cursor.execute("""
-                INSERT INTO competitions (id, name, description, start_date, end_date, target_invites, status, created_at)
+            pg_cursor.execute(text("""
+                INSERT INTO competitions_global_global (id, name, description, start_date, end_date, target_invites, status, created_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id) DO UPDATE SET
                     name = EXCLUDED.name,
@@ -83,10 +83,10 @@ def restaurar_competicao_id1():
         # 3. BUSCAR E MIGRAR PARTICIPANTES
         print(f"\n👥 MIGRANDO PARTICIPANTES...")
         
-        sqlite_cursor.execute("""
+        sqlite_cursor.execute(text("""
             SELECT cp.*, u.username, u.first_name, u.last_name
-            FROM competition_participants cp
-            LEFT JOIN users u ON cp.user_id = u.user_id
+            FROM competition_participants_global_global cp
+            LEFT JOIN users_global_global u ON cp.user_id = u.user_id
             WHERE cp.competition_id = 1
             ORDER BY cp.invites_count DESC
         """)
@@ -94,15 +94,15 @@ def restaurar_competicao_id1():
         participantes = sqlite_cursor.fetchall()
         print(f"   📊 {len(participantes)} participantes encontrados")
         
-        migrated_users = 0
+        migrated_users_global = 0
         migrated_parts = 0
         total_pontos = 0
         
         for part in participantes:
             try:
                 # Migrar usuário primeiro
-                pg_cursor.execute("""
-                    INSERT INTO users (user_id, username, first_name, last_name, created_at, updated_at)
+                pg_cursor.execute(text("""
+                    INSERT INTO users_global_global (user_id, username, first_name, last_name, created_at, updated_at)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     ON CONFLICT (user_id) DO UPDATE SET
                         username = EXCLUDED.username,
@@ -114,13 +114,13 @@ def restaurar_competicao_id1():
                     part['username'],
                     part['first_name'],
                     part['last_name'],
-                    datetime.now(),
-                    datetime.now()
+                    TIMESTAMP WITH TIME ZONE.now(),
+                    TIMESTAMP WITH TIME ZONE.now()
                 ))
                 
                 # Migrar participante
-                pg_cursor.execute("""
-                    INSERT INTO competition_participants (id, competition_id, user_id, invites_count, position, joined_at, last_invite_at)
+                pg_cursor.execute(text("""
+                    INSERT INTO competition_participants_global_global (id, competition_id, user_id, invites_count, position, joined_at, last_invite_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         invites_count = EXCLUDED.invites_count,
@@ -143,7 +143,7 @@ def restaurar_competicao_id1():
                 else:
                     print(f"   👤 {username}: {part['invites_count']} pontos")
                 
-                migrated_users += 1
+                migrated_users_global += 1
                 migrated_parts += 1
                 
             except Exception as e:
@@ -155,10 +155,10 @@ def restaurar_competicao_id1():
         # 4. BUSCAR E MIGRAR LINKS DE CONVITE
         print(f"\n📎 MIGRANDO LINKS DE CONVITE...")
         
-        sqlite_cursor.execute("""
+        sqlite_cursor.execute(text("""
             SELECT il.*, u.username, u.first_name
-            FROM invite_links il
-            LEFT JOIN users u ON il.user_id = u.user_id
+            FROM invite_links_global_global il
+            LEFT JOIN users_global_global u ON il.user_id = u.user_id
             WHERE il.competition_id = 1
             ORDER BY il.uses DESC
         """)
@@ -171,8 +171,8 @@ def restaurar_competicao_id1():
         
         for link in links:
             try:
-                pg_cursor.execute("""
-                    INSERT INTO invite_links (id, user_id, competition_id, link, uses, max_uses, expire_date, created_at)
+                pg_cursor.execute(text("""
+                    INSERT INTO invite_links_global_global (id, user_id, competition_id, link, uses, max_uses, expire_date, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         uses = EXCLUDED.uses,
@@ -211,8 +211,8 @@ def restaurar_competicao_id1():
         novo_nome = "Competição de Convites - Palpiteemcasa"
         
         try:
-            pg_cursor.execute("""
-                UPDATE competitions 
+            pg_cursor.execute(text("""
+                UPDATE competitions_global_global 
                 SET name = %s 
                 WHERE id = 1
             """, (novo_nome,))
@@ -226,37 +226,37 @@ def restaurar_competicao_id1():
         print(f"\n🔍 VERIFICANDO RESULTADO FINAL...")
         
         # Verificar competição
-        pg_cursor.execute("SELECT * FROM competitions WHERE id = 1")
+        pg_cursor.execute(text("SELECT * FROM competitions_global_global WHERE id = 1")
         comp_pg = pg_cursor.fetchone()
         print(f"   ✅ Competição: {comp_pg[1]} ({comp_pg[6]})")
         
         # Verificar participantes com pontos
-        pg_cursor.execute("""
+        pg_cursor.execute(text("""
             SELECT u.username, u.first_name, cp.invites_count
-            FROM competition_participants cp
-            LEFT JOIN users u ON cp.user_id = u.user_id
+            FROM competition_participants_global_global cp
+            LEFT JOIN users_global_global u ON cp.user_id = u.user_id
             WHERE cp.competition_id = 1 AND cp.invites_count > 0
             ORDER BY cp.invites_count DESC
         """)
         
-        top_users = pg_cursor.fetchall()
+        top_users_global = pg_cursor.fetchall()
         print(f"   🏆 TOP USUÁRIOS:")
-        for user in top_users:
+        for user in top_users_global:
             username = user[0] or user[1] or "Usuário"
             print(f"      • @{username}: {user[2]} pontos")
         
         # Verificar totais
-        pg_cursor.execute("""
+        pg_cursor.execute(text("""
             SELECT COUNT(*), SUM(invites_count) 
-            FROM competition_participants 
+            FROM competition_participants_global_global 
             WHERE competition_id = 1
         """)
         
         part_stats = pg_cursor.fetchone()
         
-        pg_cursor.execute("""
+        pg_cursor.execute(text("""
             SELECT COUNT(*), SUM(uses) 
-            FROM invite_links 
+            FROM invite_links_global_global 
             WHERE competition_id = 1
         """)
         

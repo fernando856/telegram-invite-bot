@@ -8,7 +8,7 @@ import asyncio
 import logging
 import sys
 import os
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 
 # Adicionar o diretório src ao path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -37,8 +37,8 @@ class DiagnosticoContabilizacao:
             with self.db.get_connection() as conn:
                 # Verificar tabelas principais
                 tables = [
-                    'users', 'competitions', 'competition_participants', 
-                    'invite_links'
+                    'users_global', 'competitions_global', 'competition_participants_global', 
+                    'invite_links_global'
                 ]
                 
                 for table in tables:
@@ -67,7 +67,7 @@ class DiagnosticoContabilizacao:
             with self.db.get_connection() as conn:
                 result = conn.execute("""
                     SELECT id, name, status, target_invites, start_date, end_date
-                    FROM competitions 
+                    FROM competitions_global_global 
                     WHERE status = 'active'
                     ORDER BY created_at DESC
                     LIMIT 1
@@ -99,7 +99,7 @@ class DiagnosticoContabilizacao:
                 # Contar participantes
                 total = conn.execute("""
                     SELECT COUNT(*) as total 
-                    FROM competition_participants 
+                    FROM competition_participants_global_global 
                     WHERE competition_id = ?
                 """, (competition_id,)).fetchone()['total']
                 
@@ -113,8 +113,8 @@ class DiagnosticoContabilizacao:
                         u.first_name,
                         u.username,
                         cp.last_invite_at
-                    FROM competition_participants cp
-                    JOIN users u ON cp.user_id = u.user_id
+                    FROM competition_participants_global_global cp
+                    JOIN users_global_global u ON cp.user_id = u.user_id
                     WHERE cp.competition_id = ?
                     ORDER BY cp.invites_count DESC
                     LIMIT 10
@@ -143,7 +143,7 @@ class DiagnosticoContabilizacao:
                 # Contar links ativos
                 total = conn.execute("""
                     SELECT COUNT(*) as total 
-                    FROM invite_links 
+                    FROM invite_links_global_global 
                     WHERE is_active = 1
                 """).fetchone()['total']
                 
@@ -157,8 +157,8 @@ class DiagnosticoContabilizacao:
                         il.invite_link,
                         u.first_name,
                         u.username
-                    FROM invite_links il
-                    JOIN users u ON il.user_id = u.user_id
+                    FROM invite_links_global_global il
+                    JOIN users_global_global u ON il.user_id = u.user_id
                     WHERE il.is_active = 1
                     ORDER BY il.uses DESC
                     LIMIT 5
@@ -186,7 +186,7 @@ class DiagnosticoContabilizacao:
             # Buscar link do usuário
             with self.db.get_connection() as conn:
                 link_data = conn.execute("""
-                    SELECT * FROM invite_links 
+                    SELECT * FROM invite_links_global_global 
                     WHERE user_id = ? AND is_active = 1 
                     LIMIT 1
                 """, (user_id_convidador,)).fetchone()
@@ -198,21 +198,21 @@ class DiagnosticoContabilizacao:
                 # Simular atualização do link
                 new_uses = link_data['uses'] + 1
                 conn.execute("""
-                    UPDATE invite_links 
+                    UPDATE invite_links_global_global 
                     SET uses = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 """, (new_uses, link_data['id']))
                 
                 # Atualizar total do usuário
                 conn.execute("""
-                    UPDATE users 
+                    UPDATE users_global_global 
                     SET total_invites = total_invites + 1, updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = ?
                 """, (user_id_convidador,))
                 
                 # Atualizar participante na competição
                 conn.execute("""
-                    UPDATE competition_participants 
+                    UPDATE competition_participants_global_global 
                     SET invites_count = invites_count + 1, last_invite_at = CURRENT_TIMESTAMP
                     WHERE competition_id = ? AND user_id = ?
                 """, (competition_id, user_id_convidador))

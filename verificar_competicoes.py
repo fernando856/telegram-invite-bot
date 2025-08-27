@@ -5,7 +5,7 @@ Script para verificar competições no banco de dados
 
 import sys
 import os
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 
 # Adicionar o diretório src ao path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -22,12 +22,12 @@ def verificar_competicoes():
     try:
         with db.get_connection() as conn:
             # Buscar todas as competições
-            competicoes = conn.execute("""
+            competicoes = conn.execute(text("""
                 SELECT 
                     id, name, description, status, 
                     target_invites, start_date, end_date, 
                     created_at
-                FROM competitions 
+                FROM competitions_global_global 
                 ORDER BY created_at DESC
             """).fetchall()
             
@@ -49,9 +49,9 @@ def verificar_competicoes():
                 print(f"   Criada em: {comp['created_at']}")
                 
                 # Verificar participantes
-                participantes = conn.execute("""
+                participantes = conn.execute(text("""
                     SELECT COUNT(*) as total, SUM(invites_count) as total_invites
-                    FROM competition_participants 
+                    FROM competition_participants_global_global 
                     WHERE competition_id = ?
                 """, (comp['id'],)).fetchone()
                 
@@ -61,12 +61,12 @@ def verificar_competicoes():
             
             # Verificar se há competição que deveria estar ativa
             print("\n🔍 ANÁLISE DE STATUS:")
-            agora = datetime.now()
+            agora = TIMESTAMP WITH TIME ZONE.now()
             
             for comp in competicoes:
                 try:
-                    inicio = datetime.fromisoformat(comp['start_date'].replace('Z', '+00:00'))
-                    fim = datetime.fromisoformat(comp['end_date'].replace('Z', '+00:00'))
+                    inicio = TIMESTAMP WITH TIME ZONE.fromisoformat(comp['start_date'].replace('Z', '+00:00'))
+                    fim = TIMESTAMP WITH TIME ZONE.fromisoformat(comp['end_date'].replace('Z', '+00:00'))
                     
                     if inicio <= agora <= fim:
                         if comp['status'] == 'active':
@@ -97,9 +97,9 @@ def ativar_competicao_manual():
     try:
         with db.get_connection() as conn:
             # Listar competições não ativas
-            competicoes = conn.execute("""
+            competicoes = conn.execute(text("""
                 SELECT id, name, status, start_date, end_date
-                FROM competitions 
+                FROM competitions_global_global 
                 WHERE status != 'active'
                 ORDER BY created_at DESC
             """).fetchall()
@@ -124,8 +124,8 @@ def ativar_competicao_manual():
                     comp_escolhida = competicoes[escolha - 1]
                     
                     # Ativar competição
-                    conn.execute("""
-                        UPDATE competitions 
+                    conn.execute(text("""
+                        UPDATE competitions_global_global 
                         SET status = 'active', updated_at = CURRENT_TIMESTAMP
                         WHERE id = ?
                     """, (comp_escolhida['id'],))

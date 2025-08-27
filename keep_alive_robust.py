@@ -9,7 +9,7 @@ import sys
 import time
 import subprocess
 import os
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 from pathlib import Path
 
 # Configurar logging
@@ -106,7 +106,7 @@ class RobustBotKeeper:
         """Reinicia o bot"""
         try:
             # Verificar limite de restarts
-            now = datetime.now()
+            now = TIMESTAMP WITH TIME ZONE.now()
             if self.last_restart:
                 time_diff = (now - self.last_restart).total_seconds()
                 if time_diff < 3600:  # Menos de 1 hora
@@ -158,8 +158,8 @@ class RobustBotKeeper:
                 log_file = Path('logs/bot.log')
                 if log_file.exists():
                     # Verificar se há atividade nos últimos 5 minutos
-                    last_modified = datetime.fromtimestamp(log_file.stat().st_mtime)
-                    time_diff = (datetime.now() - last_modified).total_seconds()
+                    last_modified = TIMESTAMP WITH TIME ZONE.fromtimestamp(log_file.stat().st_mtime)
+                    time_diff = (TIMESTAMP WITH TIME ZONE.now() - last_modified).total_seconds()
                     
                     if time_diff > 300:  # 5 minutos
                         logger.warning("⚠️ Bot sem atividade há mais de 5 minutos")
@@ -199,7 +199,7 @@ class RobustBotKeeper:
         """Loop de heartbeat para manter sistema ativo"""
         while self.is_running:
             try:
-                logger.debug(f"💓 Keep-alive heartbeat - {datetime.now().strftime('%H:%M:%S')}")
+                logger.debug(f"💓 Keep-alive heartbeat - {TIMESTAMP WITH TIME ZONE.now().strftime('%H:%M:%S')}")
                 await asyncio.sleep(60)  # Heartbeat a cada minuto
                 
             except Exception as e:

@@ -8,7 +8,7 @@ import asyncio
 import logging
 import sys
 import os
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 
 # Adicionar o diretório src ao path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -58,8 +58,8 @@ class DiagnosticoPostgreSQL:
                 
                 # Verificar tabelas principais
                 tables = [
-                    'users', 'competitions', 'competition_participants', 
-                    'invite_links'
+                    'users_global', 'competitions_global', 'competition_participants_global', 
+                    'invite_links_global'
                 ]
                 
                 for table in tables:
@@ -148,7 +148,7 @@ class DiagnosticoPostgreSQL:
                 # Contar links ativos
                 cursor.execute("""
                     SELECT COUNT(*) 
-                    FROM invite_links 
+                    FROM invite_links_global_global 
                     WHERE is_active = true
                 """)
                 total = cursor.fetchone()[0]
@@ -159,14 +159,14 @@ class DiagnosticoPostgreSQL:
                 cursor.execute("""
                     SELECT 
                         il.user_id,
-                        il.current_uses,
+                        il.uses,
                         il.invite_link,
                         u.first_name,
                         u.username
-                    FROM invite_links il
-                    JOIN users u ON il.user_id = u.user_id
+                    FROM invite_links_global_global il
+                    JOIN users_global_global u ON il.user_id = u.user_id
                     WHERE il.is_active = true
-                    ORDER BY il.current_uses DESC
+                    ORDER BY il.uses DESC
                     LIMIT 5
                 """)
                 
@@ -206,12 +206,12 @@ class DiagnosticoPostgreSQL:
             # Criar competição de teste se não houver ativa
             active_comp = self.db.get_active_competition()
             if not active_comp:
-                from datetime import datetime, timedelta
+                from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
                 
                 competition = self.db.create_competition(
                     name="Teste PostgreSQL",
                     description="Competição para testar PostgreSQL",
-                    start_date=datetime.now(),
+                    start_date=TIMESTAMP WITH TIME ZONE.now(),
                     duration_days=7,
                     target_invites=1000
                 )

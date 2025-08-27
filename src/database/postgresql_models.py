@@ -1,10 +1,11 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Modelos PostgreSQL para o Bot de Ranking de Convites
 """
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, BigInteger, ForeignKey, UniqueConstraint
+from sqlalchemy import create_engine, Column, BIGINT, String, TIMESTAMP WITH TIME ZONE, Boolean, BigInteger, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime, timedelta
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
 from typing import List, Optional, Dict, Any
 import os
 from dotenv import load_dotenv
@@ -17,59 +18,59 @@ from src.config.settings import settings
 Base = declarative_base()
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = 'users_global_global'
     id = Column(BigInteger, primary_key=True)
     username = Column(String, nullable=True)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.now)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = Column(TIMESTAMP WITH TIME ZONE, default=TIMESTAMP WITH TIME ZONE.now)
+    updated_at = Column(TIMESTAMP WITH TIME ZONE, default=TIMESTAMP WITH TIME ZONE.now, onupdate=TIMESTAMP WITH TIME ZONE.now)
 
 class Competition(Base):
-    __tablename__ = 'competitions'
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    __tablename__ = 'competitions_global_global'
+    id = Column(BIGINT, primary_key=True, SERIAL=True)
     name = Column(String, nullable=False)
-    start_date = Column(DateTime, default=datetime.now)
-    end_date = Column(DateTime, nullable=True)
+    start_date = Column(TIMESTAMP WITH TIME ZONE, default=TIMESTAMP WITH TIME ZONE.now)
+    end_date = Column(TIMESTAMP WITH TIME ZONE, nullable=True)
     status = Column(String, default='inactive')
     winner_user_id = Column(BigInteger, nullable=True)
-    total_participants = Column(Integer, default=0)
-    total_invites = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.now)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    total_participants = Column(BIGINT, default=0)
+    total_invites = Column(BIGINT, default=0)
+    created_at = Column(TIMESTAMP WITH TIME ZONE, default=TIMESTAMP WITH TIME ZONE.now)
+    updated_at = Column(TIMESTAMP WITH TIME ZONE, default=TIMESTAMP WITH TIME ZONE.now, onupdate=TIMESTAMP WITH TIME ZONE.now)
 
 class CompetitionParticipant(Base):
-    __tablename__ = 'competition_participants'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    competition_id = Column(Integer, ForeignKey('competitions.id'), nullable=False)
-    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
-    invites_count = Column(Integer, default=0)
-    last_invite_at = Column(DateTime, nullable=True)
+    __tablename__ = 'competition_participants_global_global'
+    id = Column(BIGINT, primary_key=True, SERIAL=True)
+    competition_id = Column(BIGINT, ForeignKey('competitions_global_global.id'), nullable=False)
+    user_id = Column(BigInteger, ForeignKey('users_global_global.id'), nullable=False)
+    invites_count = Column(BIGINT, default=0)
+    last_invite_at = Column(TIMESTAMP WITH TIME ZONE, nullable=True)
     __table_args__ = (UniqueConstraint('competition_id', 'user_id', name='_competition_user_uc'),)
 
 class InviteLink(Base):
-    __tablename__ = 'invite_links'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
-    competition_id = Column(Integer, ForeignKey('competitions.id'), nullable=True)
+    __tablename__ = 'invite_links_global_global'
+    id = Column(BIGINT, primary_key=True, SERIAL=True)
+    user_id = Column(BigInteger, ForeignKey('users_global_global.id'), nullable=False)
+    competition_id = Column(BIGINT, ForeignKey('competitions_global_global.id'), nullable=True)
     invite_link = Column(String, nullable=False)
     name = Column(String, nullable=True)
-    uses = Column(Integer, default=0)
-    max_uses = Column(Integer, default=-1)
-    expire_date = Column(DateTime, nullable=True)
-    points_awarded = Column(Integer, default=1)
+    uses = Column(BIGINT, default=0)
+    max_uses = Column(BIGINT, default=-1)
+    expire_date = Column(TIMESTAMP WITH TIME ZONE, nullable=True)
+    points_awarded = Column(BIGINT, default=1)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.now)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = Column(TIMESTAMP WITH TIME ZONE, default=TIMESTAMP WITH TIME ZONE.now)
+    updated_at = Column(TIMESTAMP WITH TIME ZONE, default=TIMESTAMP WITH TIME ZONE.now, onupdate=TIMESTAMP WITH TIME ZONE.now)
 
 class InvitedUser(Base):
-    __tablename__ = 'invited_users'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    invited_by_user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
-    invited_user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
-    competition_id = Column(Integer, ForeignKey('competitions.id'), nullable=False)
-    invite_link_id = Column(Integer, ForeignKey('invite_links.id'), nullable=False)
-    invited_at = Column(DateTime, default=datetime.now)
+    __tablename__ = 'invited_users_global_global'
+    id = Column(BIGINT, primary_key=True, SERIAL=True)
+    invited_by_user_id = Column(BigInteger, ForeignKey('users_global_global.id'), nullable=False)
+    invited_user_id = Column(BigInteger, ForeignKey('users_global_global.id'), nullable=False)
+    competition_id = Column(BIGINT, ForeignKey('competitions_global_global.id'), nullable=False)
+    invite_link_id = Column(BIGINT, ForeignKey('invite_links_global_global.id'), nullable=False)
+    invited_at = Column(TIMESTAMP WITH TIME ZONE, default=TIMESTAMP WITH TIME ZONE.now)
 
 class PostgreSQLManager:
     def __init__(self):
@@ -132,7 +133,7 @@ class PostgreSQLManager:
         finally:
             session.close()
 
-    def create_competition(self, name: str, start_date: datetime, end_date: datetime, status: str = 'active') -> Competition:
+    def create_competition(self, name: str, start_date: TIMESTAMP WITH TIME ZONE, end_date: TIMESTAMP WITH TIME ZONE, status: str = 'active') -> Competition:
         session = self.Session()
         try:
             new_competition = Competition(
@@ -183,7 +184,7 @@ class PostgreSQLManager:
             participant = session.query(CompetitionParticipant).filter_by(competition_id=competition_id, user_id=user_id).first()
             if participant:
                 participant.invites_count = invites_count
-                participant.last_invite_at = datetime.now()
+                participant.last_invite_at = TIMESTAMP WITH TIME ZONE.now()
                 session.commit()
                 return True
             return False
@@ -200,7 +201,7 @@ class PostgreSQLManager:
         finally:
             session.close()
 
-    def create_invite_link(self, user_id: int, competition_id: int, invite_link: str, name: str, max_uses: int = -1, expire_date: Optional[datetime] = None, points_awarded: int = 1) -> InviteLink:
+    def create_invite_link(self, user_id: int, competition_id: int, invite_link: str, name: str, max_uses: int = -1, expire_date: Optional[TIMESTAMP WITH TIME ZONE] = None, points_awarded: int = 1) -> InviteLink:
         session = self.Session()
         try:
             new_link = InviteLink(

@@ -1,9 +1,10 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Serviço de Monitoramento de Tracking Universal
 Compatível com SQLite e PostgreSQL
 """
 import logging
-from datetime import datetime, timedelta
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
 from typing import Dict, List, Optional, Tuple
 from telegram import Bot
 
@@ -33,15 +34,15 @@ class UniversalTrackingMonitor:
         if self.db_type == 'postgresql':
             cursor = conn.cursor()
             if params:
-                cursor.execute(query, params)
+                session.execute(text(text(query, params)
             else:
-                cursor.execute(query)
+                session.execute(text(text(query)
             return cursor
         else:
             if params:
-                return conn.execute(query, params)
+                return session.execute(text(text(query, params)
             else:
-                return conn.execute(query)
+                return session.execute(text(text(query)
     
     def _fetchone(self, result):
         """Busca um resultado adaptado ao tipo de banco"""
@@ -73,7 +74,7 @@ class UniversalTrackingMonitor:
             with self.db.get_connection() as conn:
                 # 1. Verificar se o link existe e está ativo
                 query = f"""
-                    SELECT * FROM invite_links 
+                    SELECT * FROM invite_links_global_global_global 
                     WHERE invite_link = {placeholder} AND is_active = 1
                 """
                 result = self._execute_query(conn, query, (invite_link,))
@@ -86,7 +87,7 @@ class UniversalTrackingMonitor:
                     return validation_results
                 
                 # 2. Verificar se o usuário existe
-                query = f"SELECT * FROM users WHERE user_id = {placeholder}"
+                query = f"SELECT * FROM users_global_global_global WHERE user_id = {placeholder}"
                 result = self._execute_query(conn, query, (user_id,))
                 user_data = self._fetchone(result)
                 
@@ -98,7 +99,7 @@ class UniversalTrackingMonitor:
                 
                 # 3. Verificar se há competição ativa
                 query = f"""
-                    SELECT * FROM competitions 
+                    SELECT * FROM competitions_global_global_global 
                     WHERE status = 'active' 
                     ORDER BY created_at DESC LIMIT 1
                 """
@@ -113,7 +114,7 @@ class UniversalTrackingMonitor:
                 
                 # 4. Verificar se o usuário é participante
                 query = f"""
-                    SELECT * FROM competition_participants 
+                    SELECT * FROM competition_participants_global_global_global 
                     WHERE competition_id = {placeholder} AND user_id = {placeholder}
                 """
                 comp_id = active_comp['id'] if self.db_type == 'sqlite' else active_comp[0]
@@ -156,7 +157,7 @@ class UniversalTrackingMonitor:
             
             with self.db.get_connection() as conn:
                 # Buscar dados do usuário
-                query = f"SELECT * FROM users WHERE user_id = {placeholder}"
+                query = f"SELECT * FROM users_global_global_global WHERE user_id = {placeholder}"
                 result = self._execute_query(conn, query, (user_id,))
                 user_data = self._fetchone(result)
                 
@@ -166,7 +167,7 @@ class UniversalTrackingMonitor:
                 
                 # Buscar competição ativa
                 query = f"""
-                    SELECT * FROM competitions 
+                    SELECT * FROM competitions_global_global_global 
                     WHERE status = 'active' 
                     ORDER BY created_at DESC LIMIT 1
                 """
@@ -177,10 +178,10 @@ class UniversalTrackingMonitor:
                     logger.warning("Nenhuma competição ativa para correção")
                     return False
                 
-                # Calcular total real de usos dos links do usuário
+                # Calcular total DECIMAL de usos dos links do usuário
                 query = f"""
                     SELECT COALESCE(SUM(uses), 0) as total
-                    FROM invite_links 
+                    FROM invite_links_global_global_global 
                     WHERE user_id = {placeholder} AND is_active = 1
                 """
                 result = self._execute_query(conn, query, (user_id,))
@@ -190,13 +191,13 @@ class UniversalTrackingMonitor:
                 # Atualizar total do usuário
                 if self.db_type == 'postgresql':
                     query = f"""
-                        UPDATE users 
+                        UPDATE users_global_global_global 
                         SET total_invites = {placeholder}, updated_at = CURRENT_TIMESTAMP
                         WHERE user_id = {placeholder}
                     """
                 else:
                     query = f"""
-                        UPDATE users 
+                        UPDATE users_global_global_global 
                         SET total_invites = {placeholder}, updated_at = CURRENT_TIMESTAMP
                         WHERE user_id = {placeholder}
                     """
@@ -206,7 +207,7 @@ class UniversalTrackingMonitor:
                 # Verificar se é participante da competição
                 comp_id = active_comp['id'] if self.db_type == 'sqlite' else active_comp[0]
                 query = f"""
-                    SELECT * FROM competition_participants 
+                    SELECT * FROM competition_participants_global_global_global 
                     WHERE competition_id = {placeholder} AND user_id = {placeholder}
                 """
                 result = self._execute_query(conn, query, (comp_id, user_id))
@@ -218,7 +219,7 @@ class UniversalTrackingMonitor:
                     new_comp_invites = min(total_link_uses, user_total)
                     
                     query = f"""
-                        UPDATE competition_participants 
+                        UPDATE competition_participants_global_global_global 
                         SET invites_count = {placeholder}, last_invite_at = CURRENT_TIMESTAMP
                         WHERE competition_id = {placeholder} AND user_id = {placeholder}
                     """
@@ -226,7 +227,7 @@ class UniversalTrackingMonitor:
                 else:
                     # Adicionar como participante se não existir
                     query = f"""
-                        INSERT INTO competition_participants (
+                        INSERT INTO competition_participants_global_global_global (
                             competition_id, user_id, invites_count,
                             joined_at, last_invite_at
                         ) VALUES ({placeholder}, {placeholder}, {placeholder}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -246,7 +247,7 @@ class UniversalTrackingMonitor:
     def monitor_tracking_health(self) -> Dict[str, any]:
         """Monitora a saúde geral do sistema de tracking"""
         health_report = {
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': TIMESTAMP WITH TIME ZONE.now().isoformat(),
             'db_type': self.db_type,
             'active_competition': None,
             'total_participants': 0,
@@ -261,7 +262,7 @@ class UniversalTrackingMonitor:
             with self.db.get_connection() as conn:
                 # Verificar competição ativa
                 query = f"""
-                    SELECT * FROM competitions 
+                    SELECT * FROM competitions_global_global_global 
                     WHERE status = 'active' 
                     ORDER BY created_at DESC LIMIT 1
                 """
@@ -287,7 +288,7 @@ class UniversalTrackingMonitor:
                     # Contar participantes
                     query = f"""
                         SELECT COUNT(*) as total 
-                        FROM competition_participants 
+                        FROM competition_participants_global_global_global 
                         WHERE competition_id = {placeholder}
                     """
                     result = self._execute_query(conn, query, (comp_id,))
@@ -301,7 +302,7 @@ class UniversalTrackingMonitor:
                 # Contar links ativos
                 query = f"""
                     SELECT COUNT(*) as total 
-                    FROM invite_links 
+                    FROM invite_links_global_global_global 
                     WHERE is_active = 1
                 """
                 result = self._execute_query(conn, query)
@@ -343,7 +344,7 @@ class UniversalTrackingMonitor:
             # Enviar para o canal
             await self.bot.send_message(
                 chat_id=settings.CHAT_ID,
-                text=message,
+                VARCHAR=message,
                 parse_mode='Markdown'
             )
             

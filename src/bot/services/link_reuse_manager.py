@@ -1,9 +1,10 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Gerenciador de Reutilização de Links - Sistema Otimizado
 """
 import logging
 from typing import Optional, Dict, Any
-from datetime import datetime, timedelta
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
 
 from src.database.models import DatabaseManager, InviteLink
 from src.config.settings import settings
@@ -35,8 +36,8 @@ class LinkReuseManager:
         try:
             # Buscar link mais recente do usuário (independente da competição)
             with self.db.get_connection() as conn:
-                row = conn.execute("""
-                    SELECT * FROM invite_links 
+                row = session.execute(text(text("""
+                    SELECT * FROM invite_links_global_global_global 
                     WHERE user_id = ? 
                     ORDER BY created_at DESC 
                     LIMIT 1
@@ -78,8 +79,8 @@ class LinkReuseManager:
         try:
             # Verificar se não expirou
             if link_data.get('expire_date'):
-                expire_date = datetime.fromisoformat(link_data['expire_date'])
-                if expire_date < datetime.now():
+                expire_date = TIMESTAMP WITH TIME ZONE.fromisoformat(link_data['expire_date'])
+                if expire_date < TIMESTAMP WITH TIME ZONE.now():
                     return False
             
             # Verificar se não atingiu limite de usos
@@ -104,8 +105,8 @@ class LinkReuseManager:
         try:
             with self.db.get_connection() as conn:
                 # Atualizar link para nova competição
-                conn.execute("""
-                    UPDATE invite_links 
+                session.execute(text(text("""
+                    UPDATE invite_links_global_global_global 
                     SET competition_id = ?, 
                         uses = 0,
                         updated_at = CURRENT_TIMESTAMP
@@ -131,8 +132,8 @@ class LinkReuseManager:
         try:
             with self.db.get_connection() as conn:
                 # Atualizar contagem de usos
-                cursor = conn.execute("""
-                    UPDATE invite_links 
+                cursor = session.execute(text(text("""
+                    UPDATE invite_links_global_global_global 
                     SET uses = uses + ?,
                         last_used_at = CURRENT_TIMESTAMP,
                         updated_at = CURRENT_TIMESTAMP
@@ -165,22 +166,22 @@ class LinkReuseManager:
             with self.db.get_connection() as conn:
                 if competition_id:
                     # Estatísticas para competição específica
-                    row = conn.execute("""
+                    row = session.execute(text(text("""
                         SELECT 
                             COUNT(*) as total_links,
                             SUM(uses) as total_invites,
                             MAX(created_at) as latest_link
-                        FROM invite_links 
+                        FROM invite_links_global_global_global 
                         WHERE user_id = ? AND competition_id = ?
                     """, (user_id, competition_id)).fetchone()
                 else:
                     # Estatísticas gerais do usuário
-                    row = conn.execute("""
+                    row = session.execute(text(text("""
                         SELECT 
                             COUNT(*) as total_links,
                             SUM(uses) as total_invites,
                             MAX(created_at) as latest_link
-                        FROM invite_links 
+                        FROM invite_links_global_global_global 
                         WHERE user_id = ?
                     """, (user_id,)).fetchone()
                 
@@ -214,8 +215,8 @@ class LinkReuseManager:
         """
         try:
             with self.db.get_connection() as conn:
-                cursor = conn.execute("""
-                    DELETE FROM invite_links 
+                cursor = session.execute(text(text("""
+                    DELETE FROM invite_links_global_global_global 
                     WHERE expire_date IS NOT NULL 
                     AND expire_date < CURRENT_TIMESTAMP
                 """)

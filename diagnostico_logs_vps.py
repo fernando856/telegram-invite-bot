@@ -5,7 +5,7 @@ Diagnóstico via Logs - Para execução na VPS
 import os
 import sys
 import logging
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 
 # Adicionar o diretório src ao path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -42,7 +42,7 @@ def test_database_connection():
             # Verificar competição ativa
             comp_row = conn.execute("""
                 SELECT id, name, status, target_invites 
-                FROM competitions 
+                FROM competitions_global_global 
                 WHERE status = 'active' 
                 ORDER BY created_at DESC 
                 LIMIT 1
@@ -55,8 +55,8 @@ def test_database_connection():
                 # Verificar participantes
                 participants = conn.execute("""
                     SELECT cp.user_id, cp.invites_count, u.first_name, u.username
-                    FROM competition_participants cp
-                    LEFT JOIN users u ON cp.user_id = u.user_id
+                    FROM competition_participants_global_global cp
+                    LEFT JOIN users_global_global u ON cp.user_id = u.user_id
                     WHERE cp.competition_id = ?
                     ORDER BY cp.invites_count DESC
                 """, (competition_id,)).fetchall()
@@ -69,7 +69,7 @@ def test_database_connection():
                 # Verificar links
                 links = conn.execute("""
                     SELECT user_id, uses, max_uses, invite_link, competition_id
-                    FROM invite_links
+                    FROM invite_links_global_global
                     WHERE competition_id = ? OR competition_id IS NULL
                     ORDER BY uses DESC
                 """, (competition_id,)).fetchall()
@@ -154,7 +154,7 @@ def test_link_creation_flow():
 def main():
     """Executar todos os testes"""
     logger.info("🚀 INICIANDO DIAGNÓSTICO COMPLETO VIA LOGS")
-    logger.info(f"📅 Data/Hora: {datetime.now()}")
+    logger.info(f"📅 Data/Hora: {TIMESTAMP WITH TIME ZONE.now()}")
     logger.info(f"💻 Diretório: {os.getcwd()}")
     
     # Teste 1: Conexão e dados

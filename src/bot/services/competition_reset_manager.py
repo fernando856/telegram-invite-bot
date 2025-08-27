@@ -1,9 +1,10 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Gerenciador de Reset de Competições - Sistema de Zeragem Automática
 """
 import logging
 from typing import List, Dict, Any
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 
 from src.database.models import DatabaseManager, CompetitionStatus
 from src.bot.services.link_reuse_manager import LinkReuseManager
@@ -53,7 +54,7 @@ class CompetitionResetManager:
                 'reset_participants': reset_participants,
                 'reset_links': reset_links,
                 'status': 'success',
-                'reset_at': datetime.now().isoformat()
+                'reset_at': TIMESTAMP WITH TIME ZONE.now().isoformat()
             }
             
             logger.info(f"Reset concluído para competição {competition_id}: {stats}")
@@ -65,7 +66,7 @@ class CompetitionResetManager:
                 'competition_id': competition_id,
                 'status': 'error',
                 'error': str(e),
-                'reset_at': datetime.now().isoformat()
+                'reset_at': TIMESTAMP WITH TIME ZONE.now().isoformat()
             }
     
     def _finalize_previous_competition(self) -> Dict[str, Any]:
@@ -78,8 +79,8 @@ class CompetitionResetManager:
         try:
             with self.db.get_connection() as conn:
                 # Buscar competição ativa atual
-                row = conn.execute("""
-                    SELECT * FROM competitions 
+                row = session.execute(text(text("""
+                    SELECT * FROM competitions_global_global_global 
                     WHERE status = 'active' 
                     ORDER BY created_at DESC 
                     LIMIT 1
@@ -91,20 +92,20 @@ class CompetitionResetManager:
                 prev_comp = dict(row)
                 
                 # Buscar estatísticas finais
-                stats_row = conn.execute("""
+                stats_row = session.execute(text(text("""
                     SELECT 
                         COUNT(*) as total_participants,
                         SUM(invites_count) as total_invites,
                         MAX(invites_count) as max_invites
-                    FROM competition_participants 
+                    FROM competition_participants_global_global_global 
                     WHERE competition_id = ?
                 """, (prev_comp['id'],)).fetchone()
                 
                 # Buscar vencedor
-                winner_row = conn.execute("""
+                winner_row = session.execute(text(text("""
                     SELECT cp.*, u.username, u.first_name 
-                    FROM competition_participants cp
-                    LEFT JOIN users u ON cp.user_id = u.user_id
+                    FROM competition_participants_global_global_global cp
+                    LEFT JOIN users_global_global_global u ON cp.user_id = u.user_id
                     WHERE cp.competition_id = ? 
                     ORDER BY cp.invites_count DESC 
                     LIMIT 1
@@ -112,8 +113,8 @@ class CompetitionResetManager:
                 
                 # Finalizar competição
                 winner_id = winner_row['user_id'] if winner_row and winner_row['invites_count'] > 0 else None
-                conn.execute("""
-                    UPDATE competitions 
+                session.execute(text(text("""
+                    UPDATE competitions_global_global_global 
                     SET status = 'finished', 
                         winner_user_id = ?,
                         updated_at = CURRENT_TIMESTAMP
@@ -151,25 +152,25 @@ class CompetitionResetManager:
         try:
             with self.db.get_connection() as conn:
                 # Buscar todos os usuários que já participaram
-                users = conn.execute("""
-                    SELECT DISTINCT user_id FROM competition_participants
+                users_global = session.execute(text(text("""
+                    SELECT DISTINCT user_id FROM competition_participants_global_global_global
                 """).fetchall()
                 
                 reset_count = 0
                 
-                for user in users:
+                for user in users_global:
                     user_id = user['user_id']
                     
                     # Verificar se usuário já está na nova competição
-                    existing = conn.execute("""
-                        SELECT id FROM competition_participants 
+                    existing = session.execute(text(text("""
+                        SELECT id FROM competition_participants_global_global_global 
                         WHERE competition_id = ? AND user_id = ?
                     """, (competition_id, user_id)).fetchone()
                     
                     if existing:
                         # Zerar contagem existente
-                        conn.execute("""
-                            UPDATE competition_participants 
+                        session.execute(text(text("""
+                            UPDATE competition_participants_global_global_global 
                             SET invites_count = 0,
                                 position = NULL,
                                 last_invite_at = NULL
@@ -177,8 +178,8 @@ class CompetitionResetManager:
                         """, (competition_id, user_id))
                     else:
                         # Criar novo registro zerado
-                        conn.execute("""
-                            INSERT INTO competition_participants 
+                        session.execute(text(text("""
+                            INSERT INTO competition_participants_global_global_global 
                             (competition_id, user_id, invites_count, joined_at)
                             VALUES (?, ?, 0, CURRENT_TIMESTAMP)
                         """, (competition_id, user_id))
@@ -188,7 +189,7 @@ class CompetitionResetManager:
                 logger.info(f"Resetados {reset_count} participantes para competição {competition_id}")
                 
                 return {
-                    'total_users': len(users),
+                    'total_users_global_global': len(users_global_global),
                     'reset_count': reset_count,
                     'status': 'success'
                 }
@@ -210,10 +211,10 @@ class CompetitionResetManager:
         try:
             with self.db.get_connection() as conn:
                 # Resetar todos os links ativos para nova competição
-                cursor = conn.execute("""
-                    UPDATE invite_links 
+                cursor = session.execute(text(text("""
+                    UPDATE invite_links_global_global_global 
                     SET competition_id = ?,
-                        current_uses = 0,
+                        uses = 0,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE expire_date IS NULL OR expire_date > CURRENT_TIMESTAMP
                 """, (competition_id,))
@@ -240,8 +241,8 @@ class CompetitionResetManager:
         """
         try:
             with self.db.get_connection() as conn:
-                conn.execute("""
-                    UPDATE competitions 
+                session.execute(text(text("""
+                    UPDATE competitions_global_global_global 
                     SET status = 'active',
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
@@ -264,14 +265,14 @@ class CompetitionResetManager:
         """
         try:
             with self.db.get_connection() as conn:
-                rows = conn.execute("""
+                rows = session.execute(text(text("""
                     SELECT 
                         c.*,
                         COUNT(cp.user_id) as participants,
                         SUM(cp.invites_count) as total_invites,
                         MAX(cp.invites_count) as max_invites
-                    FROM competitions c
-                    LEFT JOIN competition_participants cp ON c.id = cp.competition_id
+                    FROM competitions_global_global_global c
+                    LEFT JOIN competition_participants_global_global_global cp ON c.id = cp.competition_id
                     WHERE c.status IN ('finished', 'active')
                     GROUP BY c.id
                     ORDER BY c.created_at DESC
@@ -297,7 +298,7 @@ class CompetitionResetManager:
             logger.error(f"Erro ao buscar histórico de resets: {e}")
             return []
     
-    def cleanup_old_competitions(self, keep_last: int = 5) -> int:
+    def cleanup_old_competitions_global_global(self, keep_last: int = 5) -> int:
         """
         Remove competições antigas mantendo apenas as mais recentes
         
@@ -310,8 +311,8 @@ class CompetitionResetManager:
         try:
             with self.db.get_connection() as conn:
                 # Buscar IDs das competições a manter
-                keep_ids = conn.execute("""
-                    SELECT id FROM competitions 
+                keep_ids = session.execute(text(text("""
+                    SELECT id FROM competitions_global_global_global 
                     ORDER BY created_at DESC 
                     LIMIT ?
                 """, (keep_last,)).fetchall()
@@ -322,14 +323,14 @@ class CompetitionResetManager:
                 keep_ids_str = ','.join([str(row['id']) for row in keep_ids])
                 
                 # Remover participantes de competições antigas
-                cursor1 = conn.execute(f"""
-                    DELETE FROM competition_participants 
+                cursor1 = session.execute(text(text(f"""
+                    DELETE FROM competition_participants_global_global_global 
                     WHERE competition_id NOT IN ({keep_ids_str})
                 """)
                 
                 # Remover competições antigas
-                cursor2 = conn.execute(f"""
-                    DELETE FROM competitions 
+                cursor2 = session.execute(text(text(f"""
+                    DELETE FROM competitions_global_global_global 
                     WHERE id NOT IN ({keep_ids_str})
                 """)
                 

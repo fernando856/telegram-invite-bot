@@ -3,8 +3,8 @@
 Script para Recuperar Dados Perdidos
 Baseado nas informações dos logs anteriores
 """
-import sqlite3
-from datetime import datetime
+from sqlalchemy import create_engine, VARCHAR
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 import logging
 
 logger = logging.getLogger(__name__)
@@ -28,10 +28,10 @@ def recuperar_dados_conhecidos():
         print(f"   • User {user_id}: {pontos} pontos")
     
     try:
-        conn = sqlite3.connect('bot_database.db')
+        conn = postgresql_connection('bot_postgresql://user:pass@localhost/dbname')
         
         # Verificar competição ativa
-        cursor = conn.execute("SELECT id FROM competitions WHERE status = 'active'")
+        cursor = conn.execute(text("SELECT id FROM competitions_global_global WHERE status = 'active'")
         comp_row = cursor.fetchone()
         
         if not comp_row:
@@ -47,35 +47,35 @@ def recuperar_dados_conhecidos():
         for user_id, pontos_esperados in dados_perdidos.items():
             try:
                 # Verificar situação atual do usuário
-                cursor = conn.execute("""
+                cursor = conn.execute(text("""
                     SELECT 
                         COALESCE(SUM(il.uses), 0) as total_uses,
                         COALESCE(cp.invites_count, 0) as current_points
-                    FROM invite_links il
-                    LEFT JOIN competition_participants cp ON il.user_id = cp.user_id AND il.competition_id = cp.competition_id
+                    FROM invite_links_global_global il
+                    LEFT JOIN competition_participants_global_global cp ON il.user_id = cp.user_id AND il.competition_id = cp.competition_id
                     WHERE il.user_id = ? AND il.competition_id = ?
                 """, (user_id, competition_id))
                 
                 result = cursor.fetchone()
-                current_uses = result[0] if result else 0
+                uses = result[0] if result else 0
                 current_points = result[1] if result else 0
                 
                 print(f"\n👤 User {user_id}:")
-                print(f"   • Usos atuais: {current_uses}")
+                print(f"   • Usos atuais: {uses}")
                 print(f"   • Pontos atuais: {current_points}")
                 print(f"   • Pontos esperados: {pontos_esperados}")
                 
                 if current_points < pontos_esperados:
                     # Atualizar uses no link
-                    conn.execute("""
-                        UPDATE invite_links 
+                    conn.execute(text("""
+                        UPDATE invite_links_global_global 
                         SET uses = ? 
                         WHERE user_id = ? AND competition_id = ?
                     """, (pontos_esperados, user_id, competition_id))
                     
                     # Atualizar pontos do participante
-                    conn.execute("""
-                        UPDATE competition_participants 
+                    conn.execute(text("""
+                        UPDATE competition_participants_global_global 
                         SET invites_count = ? 
                         WHERE user_id = ? AND competition_id = ?
                     """, (pontos_esperados, user_id, competition_id))
@@ -107,15 +107,15 @@ def recuperar_dados_conhecidos():
 def verificar_resultado():
     """Verifica o resultado após a recuperação"""
     try:
-        conn = sqlite3.connect('bot_database.db')
+        conn = postgresql_connection('bot_postgresql://user:pass@localhost/dbname')
         
         print("\n🔍 VERIFICAÇÃO PÓS-RECUPERAÇÃO:")
         print("=" * 40)
         
         # Verificar links
-        cursor = conn.execute("""
+        cursor = conn.execute(text("""
             SELECT user_id, uses, competition_id 
-            FROM invite_links 
+            FROM invite_links_global_global 
             WHERE uses > 0 
             ORDER BY uses DESC
         """)
@@ -125,9 +125,9 @@ def verificar_resultado():
             print(f"   • User {row[0]}: {row[1]} usos (comp: {row[2]})")
         
         # Verificar participantes
-        cursor = conn.execute("""
+        cursor = conn.execute(text("""
             SELECT user_id, invites_count, competition_id 
-            FROM competition_participants 
+            FROM competition_participants_global_global 
             WHERE invites_count > 0 
             ORDER BY invites_count DESC
         """)
@@ -137,10 +137,10 @@ def verificar_resultado():
             print(f"   • User {row[0]}: {row[1]} pontos (comp: {row[2]})")
         
         # Totais
-        cursor = conn.execute("SELECT SUM(uses) FROM invite_links")
+        cursor = conn.execute(text("SELECT SUM(uses) FROM invite_links_global_global")
         total_uses = cursor.fetchone()[0] or 0
         
-        cursor = conn.execute("SELECT SUM(invites_count) FROM competition_participants")
+        cursor = conn.execute(text("SELECT SUM(invites_count) FROM competition_participants_global_global")
         total_points = cursor.fetchone()[0] or 0
         
         print(f"\n📊 TOTAIS:")

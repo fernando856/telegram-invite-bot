@@ -3,9 +3,9 @@
 Restaurar Competição Específica
 Busca e restaura a competição "Competição de Convites - Palpiteemcasa"
 """
-import sqlite3
+from sqlalchemy import create_engine, VARCHAR
 import psycopg2
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 import os
 from dotenv import load_dotenv
 
@@ -22,7 +22,7 @@ def restaurar_competicao_especifica():
     
     try:
         # Conectar SQLite
-        sqlite_conn = sqlite3.connect('bot_database.db')
+        sqlite_conn = postgresql_connection('bot_postgresql://user:pass@localhost/dbname')
         sqlite_conn.row_factory = sqlite3.Row
         sqlite_cursor = sqlite_conn.cursor()
         
@@ -39,8 +39,8 @@ def restaurar_competicao_especifica():
         
         # 1. BUSCAR COMPETIÇÃO NO SQLITE
         print(f"\n🏆 BUSCANDO: '{nome_competicao}'")
-        sqlite_cursor.execute("""
-            SELECT * FROM competitions 
+        sqlite_cursor.execute(text("""
+            SELECT * FROM competitions_global_global 
             WHERE name = ? OR name LIKE ?
         """, (nome_competicao, f"%{nome_competicao}%"))
         
@@ -51,7 +51,7 @@ def restaurar_competicao_especifica():
             
             # Listar todas as competições disponíveis
             print("\n📋 COMPETIÇÕES DISPONÍVEIS:")
-            sqlite_cursor.execute("SELECT id, name, status FROM competitions")
+            sqlite_cursor.execute(text("SELECT id, name, status FROM competitions_global_global")
             todas_comps = sqlite_cursor.fetchall()
             
             for comp in todas_comps:
@@ -72,8 +72,8 @@ def restaurar_competicao_especifica():
         print(f"\n🔄 MIGRANDO COMPETIÇÃO ID {competition_id}...")
         
         try:
-            pg_cursor.execute("""
-                INSERT INTO competitions (id, name, description, start_date, end_date, target_invites, status, created_at)
+            pg_cursor.execute(text("""
+                INSERT INTO competitions_global_global (id, name, description, start_date, end_date, target_invites, status, created_at)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (id) DO UPDATE SET
                     name = EXCLUDED.name,
@@ -99,10 +99,10 @@ def restaurar_competicao_especifica():
         # 3. BUSCAR E MIGRAR PARTICIPANTES
         print(f"\n👥 MIGRANDO PARTICIPANTES DA COMPETIÇÃO {competition_id}...")
         
-        sqlite_cursor.execute("""
+        sqlite_cursor.execute(text("""
             SELECT cp.*, u.username, u.first_name, u.last_name
-            FROM competition_participants cp
-            LEFT JOIN users u ON cp.user_id = u.user_id
+            FROM competition_participants_global_global cp
+            LEFT JOIN users_global_global u ON cp.user_id = u.user_id
             WHERE cp.competition_id = ?
             ORDER BY cp.invites_count DESC
         """, (competition_id,))
@@ -110,14 +110,14 @@ def restaurar_competicao_especifica():
         participantes = sqlite_cursor.fetchall()
         print(f"   📊 {len(participantes)} participantes encontrados")
         
-        migrated_users = 0
+        migrated_users_global = 0
         migrated_parts = 0
         
         for part in participantes:
             try:
                 # Migrar usuário primeiro
-                pg_cursor.execute("""
-                    INSERT INTO users (user_id, username, first_name, last_name, created_at, updated_at)
+                pg_cursor.execute(text("""
+                    INSERT INTO users_global_global (user_id, username, first_name, last_name, created_at, updated_at)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     ON CONFLICT (user_id) DO UPDATE SET
                         username = EXCLUDED.username,
@@ -129,13 +129,13 @@ def restaurar_competicao_especifica():
                     part['username'],
                     part['first_name'],
                     part['last_name'],
-                    datetime.now(),
-                    datetime.now()
+                    TIMESTAMP WITH TIME ZONE.now(),
+                    TIMESTAMP WITH TIME ZONE.now()
                 ))
                 
                 # Migrar participante
-                pg_cursor.execute("""
-                    INSERT INTO competition_participants (id, competition_id, user_id, invites_count, position, joined_at, last_invite_at)
+                pg_cursor.execute(text("""
+                    INSERT INTO competition_participants_global_global (id, competition_id, user_id, invites_count, position, joined_at, last_invite_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         invites_count = EXCLUDED.invites_count,
@@ -154,7 +154,7 @@ def restaurar_competicao_especifica():
                 username = part['username'] or part['first_name'] or f"User {part['user_id']}"
                 print(f"   ✅ {username}: {part['invites_count']} pontos")
                 
-                migrated_users += 1
+                migrated_users_global += 1
                 migrated_parts += 1
                 
             except Exception as e:
@@ -165,10 +165,10 @@ def restaurar_competicao_especifica():
         # 4. BUSCAR E MIGRAR LINKS DE CONVITE
         print(f"\n📎 MIGRANDO LINKS DA COMPETIÇÃO {competition_id}...")
         
-        sqlite_cursor.execute("""
+        sqlite_cursor.execute(text("""
             SELECT il.*, u.username, u.first_name
-            FROM invite_links il
-            LEFT JOIN users u ON il.user_id = u.user_id
+            FROM invite_links_global_global il
+            LEFT JOIN users_global_global u ON il.user_id = u.user_id
             WHERE il.competition_id = ?
             ORDER BY il.uses DESC
         """, (competition_id,))
@@ -181,8 +181,8 @@ def restaurar_competicao_especifica():
         
         for link in links:
             try:
-                pg_cursor.execute("""
-                    INSERT INTO invite_links (id, user_id, competition_id, link, uses, max_uses, expire_date, created_at)
+                pg_cursor.execute(text("""
+                    INSERT INTO invite_links_global_global (id, user_id, competition_id, link, uses, max_uses, expire_date, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         uses = EXCLUDED.uses,
@@ -219,14 +219,14 @@ def restaurar_competicao_especifica():
         print(f"\n🔍 VERIFICANDO MIGRAÇÃO DA COMPETIÇÃO...")
         
         # Verificar competição
-        pg_cursor.execute("SELECT * FROM competitions WHERE id = %s", (competition_id,))
+        pg_cursor.execute(text("SELECT * FROM competitions_global_global WHERE id = %s", (competition_id,))
         comp_pg = pg_cursor.fetchone()
         print(f"   ✅ Competição: {comp_pg[1]} ({comp_pg[6]})")
         
         # Verificar participantes
-        pg_cursor.execute("""
+        pg_cursor.execute(text("""
             SELECT COUNT(*), SUM(invites_count) 
-            FROM competition_participants 
+            FROM competition_participants_global_global 
             WHERE competition_id = %s
         """, (competition_id,))
         
@@ -234,9 +234,9 @@ def restaurar_competicao_especifica():
         print(f"   ✅ Participantes: {part_stats[0]} ({part_stats[1]} pontos total)")
         
         # Verificar links
-        pg_cursor.execute("""
+        pg_cursor.execute(text("""
             SELECT COUNT(*), SUM(uses) 
-            FROM invite_links 
+            FROM invite_links_global_global 
             WHERE competition_id = %s
         """, (competition_id,))
         

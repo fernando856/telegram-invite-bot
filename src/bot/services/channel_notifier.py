@@ -4,7 +4,7 @@ Envia mensagens sobre competições, rankings e estatísticas
 """
 
 import logging
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 from typing import Dict, Any, Optional, List
 from telegram import Bot
 from telegram.error import TelegramError
@@ -50,7 +50,7 @@ class ChannelNotifier:
             
             await self.bot.send_message(
                 chat_id=self.channel_id,
-                text=msg,
+                VARCHAR=msg,
                 parse_mode='Markdown'
             )
             
@@ -103,7 +103,7 @@ class ChannelNotifier:
             
             await self.bot.send_message(
                 chat_id=self.channel_id,
-                text=msg,
+                VARCHAR=msg,
                 parse_mode='Markdown'
             )
             
@@ -158,7 +158,7 @@ class ChannelNotifier:
             
             await self.bot.send_message(
                 chat_id=self.channel_id,
-                text=msg,
+                VARCHAR=msg,
                 parse_mode='Markdown'
             )
             
@@ -205,7 +205,7 @@ class ChannelNotifier:
             
             await self.bot.send_message(
                 chat_id=self.channel_id,
-                text=msg,
+                VARCHAR=msg,
                 parse_mode='Markdown'
             )
             
@@ -231,7 +231,7 @@ class ChannelNotifier:
             
             msg = f"📈 *ESTATÍSTICAS DIÁRIAS*\n\n"
             msg += f"🏆 *Competição:* {competition_name}\n"
-            msg += f"📅 *Data:* {datetime.now().strftime('%d/%m/%Y')}\n\n"
+            msg += f"📅 *Data:* {TIMESTAMP WITH TIME ZONE.now().strftime('%d/%m/%Y')}\n\n"
             
             msg += f"🆕 *Hoje:*\n"
             msg += f"• Novos participantes: {new_participants:,}\n"
@@ -248,7 +248,7 @@ class ChannelNotifier:
             
             await self.bot.send_message(
                 chat_id=self.channel_id,
-                text=msg,
+                VARCHAR=msg,
                 parse_mode='Markdown'
             )
             
@@ -269,7 +269,7 @@ class ChannelNotifier:
             
             await self.bot.send_message(
                 chat_id=self.channel_id,
-                text=test_msg,
+                VARCHAR=test_msg,
                 parse_mode='Markdown'
             )
             

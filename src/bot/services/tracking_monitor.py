@@ -1,9 +1,10 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Serviço de Monitoramento de Tracking
 Monitora e valida a contabilização de novos membros
 """
 import logging
-from datetime import datetime, timedelta
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
 from typing import Dict, List, Optional, Tuple
 from telegram import Bot
 
@@ -30,8 +31,8 @@ class TrackingMonitor:
         try:
             with self.db.get_connection() as conn:
                 # 1. Verificar se o link existe e está ativo
-                link_data = conn.execute("""
-                    SELECT * FROM invite_links 
+                link_data = session.execute(text(text("""
+                    SELECT * FROM invite_links_global_global_global 
                     WHERE invite_link = ? AND is_active = 1
                 """, (invite_link,)).fetchone()
                 
@@ -42,8 +43,8 @@ class TrackingMonitor:
                     return validation_results
                 
                 # 2. Verificar se o usuário existe
-                user_data = conn.execute("""
-                    SELECT * FROM users WHERE user_id = ?
+                user_data = session.execute(text(text("""
+                    SELECT * FROM users_global_global_global WHERE user_id = ?
                 """, (user_id,)).fetchone()
                 
                 validation_results['user_exists'] = user_data is not None
@@ -53,8 +54,8 @@ class TrackingMonitor:
                     return validation_results
                 
                 # 3. Verificar se há competição ativa
-                active_comp = conn.execute("""
-                    SELECT * FROM competitions 
+                active_comp = session.execute(text(text("""
+                    SELECT * FROM competitions_global_global_global 
                     WHERE status = 'active' 
                     ORDER BY created_at DESC LIMIT 1
                 """).fetchone()
@@ -66,8 +67,8 @@ class TrackingMonitor:
                     return validation_results
                 
                 # 4. Verificar se o usuário é participante
-                participant = conn.execute("""
-                    SELECT * FROM competition_participants 
+                participant = session.execute(text(text("""
+                    SELECT * FROM competition_participants_global_global_global 
                     WHERE competition_id = ? AND user_id = ?
                 """, (active_comp['id'], user_id)).fetchone()
                 
@@ -101,8 +102,8 @@ class TrackingMonitor:
         try:
             with self.db.get_connection() as conn:
                 # Buscar dados do usuário
-                user_data = conn.execute("""
-                    SELECT * FROM users WHERE user_id = ?
+                user_data = session.execute(text(text("""
+                    SELECT * FROM users_global_global_global WHERE user_id = ?
                 """, (user_id,)).fetchone()
                 
                 if not user_data:
@@ -110,8 +111,8 @@ class TrackingMonitor:
                     return False
                 
                 # Buscar competição ativa
-                active_comp = conn.execute("""
-                    SELECT * FROM competitions 
+                active_comp = session.execute(text(text("""
+                    SELECT * FROM competitions_global_global_global 
                     WHERE status = 'active' 
                     ORDER BY created_at DESC LIMIT 1
                 """).fetchone()
@@ -120,23 +121,23 @@ class TrackingMonitor:
                     logger.warning("Nenhuma competição ativa para correção")
                     return False
                 
-                # Calcular total real de usos dos links do usuário
-                total_link_uses = conn.execute("""
+                # Calcular total DECIMAL de usos dos links do usuário
+                total_link_uses = session.execute(text(text("""
                     SELECT COALESCE(SUM(uses), 0) as total
-                    FROM invite_links 
+                    FROM invite_links_global_global_global 
                     WHERE user_id = ? AND is_active = 1
                 """, (user_id,)).fetchone()['total']
                 
                 # Atualizar total do usuário
-                conn.execute("""
-                    UPDATE users 
+                session.execute(text(text("""
+                    UPDATE users_global_global_global 
                     SET total_invites = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = ?
                 """, (total_link_uses, user_id))
                 
                 # Verificar se é participante da competição
-                participant = conn.execute("""
-                    SELECT * FROM competition_participants 
+                participant = session.execute(text(text("""
+                    SELECT * FROM competition_participants_global_global_global 
                     WHERE competition_id = ? AND user_id = ?
                 """, (active_comp['id'], user_id)).fetchone()
                 
@@ -144,15 +145,15 @@ class TrackingMonitor:
                     # Atualizar convites na competição (usar o menor valor para ser conservador)
                     new_comp_invites = min(total_link_uses, user_data['total_invites'])
                     
-                    conn.execute("""
-                        UPDATE competition_participants 
+                    session.execute(text(text("""
+                        UPDATE competition_participants_global_global_global 
                         SET invites_count = ?, last_invite_at = CURRENT_TIMESTAMP
                         WHERE competition_id = ? AND user_id = ?
                     """, (new_comp_invites, active_comp['id'], user_id))
                 else:
                     # Adicionar como participante se não existir
-                    conn.execute("""
-                        INSERT INTO competition_participants (
+                    session.execute(text(text("""
+                        INSERT INTO competition_participants_global_global_global (
                             competition_id, user_id, invites_count,
                             joined_at, last_invite_at
                         ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -170,7 +171,7 @@ class TrackingMonitor:
     def monitor_tracking_health(self) -> Dict[str, any]:
         """Monitora a saúde geral do sistema de tracking"""
         health_report = {
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': TIMESTAMP WITH TIME ZONE.now().isoformat(),
             'active_competition': None,
             'total_participants': 0,
             'total_links': 0,
@@ -181,8 +182,8 @@ class TrackingMonitor:
         try:
             with self.db.get_connection() as conn:
                 # Verificar competição ativa
-                active_comp = conn.execute("""
-                    SELECT * FROM competitions 
+                active_comp = session.execute(text(text("""
+                    SELECT * FROM competitions_global_global_global 
                     WHERE status = 'active' 
                     ORDER BY created_at DESC LIMIT 1
                 """).fetchone()
@@ -195,9 +196,9 @@ class TrackingMonitor:
                     }
                     
                     # Contar participantes
-                    participants_count = conn.execute("""
+                    participants_count = session.execute(text(text("""
                         SELECT COUNT(*) as total 
-                        FROM competition_participants 
+                        FROM competition_participants_global_global_global 
                         WHERE competition_id = ?
                     """, (active_comp['id'],)).fetchone()['total']
                     
@@ -206,9 +207,9 @@ class TrackingMonitor:
                     health_report['issues'].append("Nenhuma competição ativa encontrada")
                 
                 # Contar links ativos
-                links_count = conn.execute("""
+                links_count = session.execute(text(text("""
                     SELECT COUNT(*) as total 
-                    FROM invite_links 
+                    FROM invite_links_global_global_global 
                     WHERE is_active = 1
                 """).fetchone()['total']
                 
@@ -216,15 +217,15 @@ class TrackingMonitor:
                 
                 # Verificar inconsistências
                 if active_comp:
-                    inconsistencies = conn.execute("""
+                    inconsistencies = session.execute(text(text("""
                         SELECT 
                             u.user_id,
                             u.total_invites,
                             cp.invites_count as comp_invites,
                             COALESCE(SUM(il.uses), 0) as link_uses
-                        FROM users u
-                        JOIN competition_participants cp ON u.user_id = cp.user_id
-                        LEFT JOIN invite_links il ON u.user_id = il.user_id AND il.is_active = 1
+                        FROM users_global_global_global u
+                        JOIN competition_participants_global_global_global cp ON u.user_id = cp.user_id
+                        LEFT JOIN invite_links_global_global_global il ON u.user_id = il.user_id AND il.is_active = 1
                         WHERE cp.competition_id = ?
                         GROUP BY u.user_id, u.total_invites, cp.invites_count
                         HAVING (
@@ -240,10 +241,10 @@ class TrackingMonitor:
                         health_report['issues'].append(f"Encontradas {len(inconsistencies)} inconsistências nos contadores")
                 
                 # Verificar links órfãos (sem usuário)
-                orphan_links = conn.execute("""
+                orphan_links = session.execute(text(text("""
                     SELECT COUNT(*) as total
-                    FROM invite_links il
-                    LEFT JOIN users u ON il.user_id = u.user_id
+                    FROM invite_links_global_global_global il
+                    LEFT JOIN users_global_global_global u ON il.user_id = u.user_id
                     WHERE il.is_active = 1 AND u.user_id IS NULL
                 """).fetchone()['total']
                 
@@ -252,10 +253,10 @@ class TrackingMonitor:
                 
                 # Verificar participantes sem links
                 if active_comp:
-                    participants_no_links = conn.execute("""
+                    participants_no_links = session.execute(text(text("""
                         SELECT COUNT(*) as total
-                        FROM competition_participants cp
-                        LEFT JOIN invite_links il ON cp.user_id = il.user_id AND il.is_active = 1
+                        FROM competition_participants_global_global_global cp
+                        LEFT JOIN invite_links_global_global_global il ON cp.user_id = il.user_id AND il.is_active = 1
                         WHERE cp.competition_id = ? AND il.user_id IS NULL
                     """, (active_comp['id'],)).fetchone()['total']
                     
@@ -294,7 +295,7 @@ class TrackingMonitor:
             # Enviar para o canal (ou chat de administradores)
             await self.bot.send_message(
                 chat_id=settings.CHAT_ID,  # ou um chat específico para alertas
-                text=message,
+                VARCHAR=message,
                 parse_mode='Markdown'
             )
             
@@ -316,18 +317,18 @@ class TrackingMonitor:
         try:
             with self.db.get_connection() as conn:
                 # 1. Corrigir inconsistências nos contadores
-                active_comp = conn.execute("""
-                    SELECT * FROM competitions 
+                active_comp = session.execute(text(text("""
+                    SELECT * FROM competitions_global_global_global 
                     WHERE status = 'active' 
                     ORDER BY created_at DESC LIMIT 1
                 """).fetchone()
                 
                 if active_comp:
-                    inconsistent_users = conn.execute("""
+                    inconsistent_users_global_global = session.execute(text(text("""
                         SELECT DISTINCT u.user_id
-                        FROM users u
-                        JOIN competition_participants cp ON u.user_id = cp.user_id
-                        LEFT JOIN invite_links il ON u.user_id = il.user_id AND il.is_active = 1
+                        FROM users_global_global_global u
+                        JOIN competition_participants_global_global_global cp ON u.user_id = cp.user_id
+                        LEFT JOIN invite_links_global_global_global il ON u.user_id = il.user_id AND il.is_active = 1
                         WHERE cp.competition_id = ?
                         GROUP BY u.user_id, u.total_invites, cp.invites_count
                         HAVING (
@@ -336,23 +337,23 @@ class TrackingMonitor:
                         )
                     """, (active_comp['id'],)).fetchall()
                     
-                    for user in inconsistent_users:
+                    for user in inconsistent_users_global_global:
                         if self.fix_tracking_inconsistencies(user['user_id']):
                             fixes_applied['inconsistencies_fixed'] += 1
                 
                 # 2. Limpar links órfãos
-                orphan_links = conn.execute("""
-                    UPDATE invite_links 
+                orphan_links = session.execute(text(text("""
+                    UPDATE invite_links_global_global_global 
                     SET is_active = 0, updated_at = CURRENT_TIMESTAMP
-                    WHERE user_id NOT IN (SELECT user_id FROM users)
+                    WHERE user_id NOT IN (SELECT user_id FROM users_global_global_global)
                     AND is_active = 1
                 """)
                 fixes_applied['orphan_links_cleaned'] = orphan_links.rowcount
                 
                 # 3. Adicionar participantes faltantes (usuários com links mas sem participação)
                 if active_comp:
-                    missing_participants = conn.execute("""
-                        INSERT INTO competition_participants (
+                    missing_participants = session.execute(text(text("""
+                        INSERT INTO competition_participants_global_global_global (
                             competition_id, user_id, invites_count,
                             joined_at, last_invite_at
                         )
@@ -362,11 +363,11 @@ class TrackingMonitor:
                             COALESCE(SUM(il.uses), 0) as invites_count,
                             CURRENT_TIMESTAMP as joined_at,
                             CURRENT_TIMESTAMP as last_invite_at
-                        FROM invite_links il
-                        JOIN users u ON il.user_id = u.user_id
+                        FROM invite_links_global_global_global il
+                        JOIN users_global_global_global u ON il.user_id = u.user_id
                         WHERE il.is_active = 1
                         AND il.user_id NOT IN (
-                            SELECT user_id FROM competition_participants 
+                            SELECT user_id FROM competition_participants_global_global_global 
                             WHERE competition_id = ?
                         )
                         GROUP BY il.user_id

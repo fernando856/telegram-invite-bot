@@ -1,3 +1,4 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Configurações do Bot de Ranking de Convites com Sistema de Competição
 """

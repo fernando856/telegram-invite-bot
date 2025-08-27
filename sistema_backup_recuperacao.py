@@ -3,17 +3,17 @@
 Sistema de Backup e Recuperação de Dados
 Previne perda de dados e permite recuperação
 """
-import sqlite3
+from sqlalchemy import create_engine, text
 import json
 import os
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 from typing import Dict, List, Any
 import logging
 
 logger = logging.getLogger(__name__)
 
 class BackupRecoverySystem:
-    def __init__(self, db_path: str = "bot_database.db"):
+    def __init__(self, db_path: str = "bot_postgresql://user:pass@localhost/dbname"):
         self.db_path = db_path
         self.backup_dir = "backups"
         self.ensure_backup_dir()
@@ -26,10 +26,10 @@ class BackupRecoverySystem:
     def create_backup(self, reason: str = "manual") -> str:
         """Cria backup completo do banco de dados"""
         try:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = TIMESTAMP WITH TIME ZONE.now().strftime("%Y%m%d_%H%M%S")
             backup_file = f"{self.backup_dir}/backup_{timestamp}_{reason}.json"
             
-            conn = sqlite3.connect(self.db_path)
+            conn = postgresql_connection(self.db_path)
             conn.row_factory = sqlite3.Row
             
             backup_data = {
@@ -39,7 +39,7 @@ class BackupRecoverySystem:
             }
             
             # Backup de todas as tabelas importantes
-            tables = ["competitions", "competition_participants", "invite_links", "users"]
+            tables = ["competitions_global", "competition_participants_global", "invite_links_global", "users_global"]
             
             for table in tables:
                 cursor = conn.execute(f"SELECT * FROM {table}")
@@ -82,27 +82,27 @@ class BackupRecoverySystem:
                 "data_changes": {}
             }
             
-            # Comparar dados de invite_links
-            current_links = current_backup["tables"]["invite_links"]
-            previous_links = previous_backup["tables"]["invite_links"]
+            # Comparar dados de invite_links_global
+            current_links = current_backup["tables"]["invite_links_global"]
+            previous_links = previous_backup["tables"]["invite_links_global"]
             
             current_total_uses = sum(link.get("uses", 0) for link in current_links)
             previous_total_uses = sum(link.get("uses", 0) for link in previous_links)
             
-            analysis["data_changes"]["invite_links"] = {
+            analysis["data_changes"]["invite_links_global"] = {
                 "current_total_uses": current_total_uses,
                 "previous_total_uses": previous_total_uses,
                 "difference": current_total_uses - previous_total_uses
             }
             
             # Comparar participantes
-            current_participants = current_backup["tables"]["competition_participants"]
-            previous_participants = previous_backup["tables"]["competition_participants"]
+            current_participants = current_backup["tables"]["competition_participants_global"]
+            previous_participants = previous_backup["tables"]["competition_participants_global"]
             
             current_total_points = sum(p.get("invites_count", 0) for p in current_participants)
             previous_total_points = sum(p.get("invites_count", 0) for p in previous_participants)
             
-            analysis["data_changes"]["competition_participants"] = {
+            analysis["data_changes"]["competition_participants_global"] = {
                 "current_total_points": current_total_points,
                 "previous_total_points": previous_total_points,
                 "difference": current_total_points - previous_total_points
@@ -137,17 +137,17 @@ class BackupRecoverySystem:
                 "errors": []
             }
             
-            conn = sqlite3.connect(self.db_path)
+            conn = postgresql_connection(self.db_path)
             
-            # Recuperar dados de invite_links com usos > 0
-            if "invite_links" in backup_data["tables"]:
-                links_with_uses = [link for link in backup_data["tables"]["invite_links"] if link.get("uses", 0) > 0]
+            # Recuperar dados de invite_links_global com usos > 0
+            if "invite_links_global" in backup_data["tables"]:
+                links_with_uses = [link for link in backup_data["tables"]["invite_links_global"] if link.get("uses", 0) > 0]
                 
                 for link in links_with_uses:
                     try:
                         # Atualizar uses no link atual
                         conn.execute("""
-                            UPDATE invite_links 
+                            UPDATE invite_links_global_global 
                             SET uses = ? 
                             WHERE user_id = ? AND competition_id = ?
                         """, (link["uses"], link["user_id"], link.get("competition_id")))
@@ -161,14 +161,14 @@ class BackupRecoverySystem:
                         recovery_stats["errors"].append(f"Erro ao recuperar link do user {link['user_id']}: {e}")
             
             # Recuperar pontos dos participantes
-            if "competition_participants" in backup_data["tables"]:
-                participants_with_points = [p for p in backup_data["tables"]["competition_participants"] if p.get("invites_count", 0) > 0]
+            if "competition_participants_global" in backup_data["tables"]:
+                participants_with_points = [p for p in backup_data["tables"]["competition_participants_global"] if p.get("invites_count", 0) > 0]
                 
                 for participant in participants_with_points:
                     try:
                         # Atualizar pontos do participante
                         conn.execute("""
-                            UPDATE competition_participants 
+                            UPDATE competition_participants_global_global 
                             SET invites_count = ? 
                             WHERE competition_id = ? AND user_id = ?
                         """, (participant["invites_count"], participant["competition_id"], participant["user_id"]))
@@ -210,7 +210,7 @@ def main():
     print(json.dumps(analysis, indent=2, default=str))
     
     # Perguntar se deve tentar recuperação
-    if analysis.get("data_changes", {}).get("invite_links", {}).get("difference", 0) < 0:
+    if analysis.get("data_changes", {}).get("invite_links_global", {}).get("difference", 0) < 0:
         print("\n⚠️ Detectada possível perda de dados!")
         print("🔄 Tentando recuperação automática...")
         

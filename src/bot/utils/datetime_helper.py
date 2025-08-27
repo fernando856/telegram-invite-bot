@@ -1,28 +1,28 @@
 """
-Utilitários para manipulação de DateTime
+Utilitários para manipulação de TIMESTAMP WITH TIME ZONE
 """
 
-from datetime import datetime, timedelta
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
 from typing import Union
 import logging
 
 logger = logging.getLogger(__name__)
 
-def safe_datetime_conversion(date_value: Union[str, datetime]) -> datetime:
+def safe_datetime_conversion(date_value: Union[str, TIMESTAMP WITH TIME ZONE]) -> TIMESTAMP WITH TIME ZONE:
     """
-    Converte string para datetime de forma segura
+    Converte string para TIMESTAMP WITH TIME ZONE de forma segura
     
     Args:
-        date_value: String ou datetime a ser convertido
+        date_value: String ou TIMESTAMP WITH TIME ZONE a ser convertido
         
     Returns:
-        datetime: Objeto datetime válido
+        TIMESTAMP WITH TIME ZONE: Objeto TIMESTAMP WITH TIME ZONE válido
     """
-    if isinstance(date_value, datetime):
+    if isinstance(date_value, TIMESTAMP WITH TIME ZONE):
         return date_value
     
     if isinstance(date_value, str):
-        # Formatos comuns de datetime
+        # Formatos comuns de TIMESTAMP WITH TIME ZONE
         formats = [
             "%Y-%m-%dT%H:%M:%S.%f",      # ISO com microssegundos
             "%Y-%m-%dT%H:%M:%S",         # ISO sem microssegundos
@@ -33,33 +33,33 @@ def safe_datetime_conversion(date_value: Union[str, datetime]) -> datetime:
         
         for fmt in formats:
             try:
-                return datetime.strptime(date_value, fmt)
+                return TIMESTAMP WITH TIME ZONE.strptime(date_value, fmt)
             except ValueError:
                 continue
         
         # Se nenhum formato funcionou, log do erro e retorna fallback
-        logger.warning(f"Falha ao converter datetime: '{date_value}'. Usando fallback.")
-        return datetime.now()
+        logger.warning(f"Falha ao converter TIMESTAMP WITH TIME ZONE: '{date_value}'. Usando fallback.")
+        return TIMESTAMP WITH TIME ZONE.now()
     
-    # Se não é string nem datetime, usar fallback
-    logger.error(f"Tipo inválido para conversão datetime: {type(date_value)}. Usando fallback.")
-    return datetime.now()
+    # Se não é string nem TIMESTAMP WITH TIME ZONE, usar fallback
+    logger.error(f"Tipo inválido para conversão TIMESTAMP WITH TIME ZONE: {type(date_value)}. Usando fallback.")
+    return TIMESTAMP WITH TIME ZONE.now()
 
-def calculate_time_remaining(end_date: Union[str, datetime], now: datetime = None) -> timedelta:
+def calculate_time_remaining(end_date: Union[str, TIMESTAMP WITH TIME ZONE], now: TIMESTAMP WITH TIME ZONE = None) -> timedelta:
     """
     Calcula tempo restante de forma segura
     
     Args:
-        end_date: Data final (string ou datetime)
-        now: Data atual (opcional, usa datetime.now() se não fornecido)
+        end_date: Data final (string ou TIMESTAMP WITH TIME ZONE)
+        now: Data atual (opcional, usa TIMESTAMP WITH TIME ZONE.now() se não fornecido)
         
     Returns:
         timedelta: Tempo restante (0 se já passou)
     """
     if now is None:
-        now = datetime.now()
+        now = TIMESTAMP WITH TIME ZONE.now()
     
-    # Converter end_date para datetime
+    # Converter end_date para TIMESTAMP WITH TIME ZONE
     end_datetime = safe_datetime_conversion(end_date)
     
     # Calcular diferença

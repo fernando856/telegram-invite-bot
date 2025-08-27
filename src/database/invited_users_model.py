@@ -1,9 +1,10 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Modelo para Usuários Convidados
 Armazena dados dos usuários que entraram pelos links de convite
 """
-import sqlite3
-from datetime import datetime
+from sqlalchemy import create_engine, VARCHAR
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 
@@ -17,48 +18,48 @@ class InvitedUser:
     last_name: Optional[str]
     invite_link: str
     competition_id: Optional[int]
-    joined_at: datetime
-    created_at: Optional[datetime] = None
+    joined_at: TIMESTAMP WITH TIME ZONE
+    created_at: Optional[TIMESTAMP WITH TIME ZONE] = None
 
 class InvitedUsersManager:
-    def __init__(self, db_path: str = "bot_database.db"):
+    def __init__(self, db_path: str = "bot_postgresql://user:pass@localhost/dbname"):
         self.db_path = db_path
         self.init_table()
     
     def get_connection(self) -> sqlite3.Connection:
         """Cria conexão com o banco de dados"""
-        conn = sqlite3.connect(self.db_path)
+        conn = postgresql_connection(self.db_path)
         conn.row_factory = sqlite3.Row
         return conn
     
     def init_table(self):
         """Cria tabela de usuários convidados"""
         with self.get_connection() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS invited_users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    inviter_user_id INTEGER NOT NULL,
-                    invited_user_id INTEGER NOT NULL,
-                    username TEXT,
-                    first_name TEXT,
-                    last_name TEXT,
-                    invite_link TEXT NOT NULL,
-                    competition_id INTEGER,
-                    joined_at DATETIME NOT NULL,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            session.execute(text(text("""
+                CREATE TABLE IF NOT EXISTS invited_users_global_global (
+                    id BIGSERIAL PRIMARY KEY SERIAL,
+                    inviter_user_id BIGINT NOT NULL,
+                    invited_user_id BIGINT NOT NULL,
+                    username VARCHAR,
+                    first_name VARCHAR,
+                    last_name VARCHAR,
+                    invite_link VARCHAR NOT NULL,
+                    competition_id BIGINT,
+                    joined_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(inviter_user_id, invited_user_id, competition_id)
                 )
             """)
             
             # Criar índices para performance
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_invited_users_inviter 
-                ON invited_users(inviter_user_id)
+            session.execute(text(text("""
+                CREATE INDEX IF NOT EXISTS idx_invited_users_global_global_inviter 
+                ON invited_users_global_global(inviter_user_id)
             """)
             
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_invited_users_competition 
-                ON invited_users(competition_id)
+            session.execute(text(text("""
+                CREATE INDEX IF NOT EXISTS idx_invited_users_global_global_competition 
+                ON invited_users_global_global(competition_id)
             """)
     
     def add_invited_user(self, inviter_user_id: int, invited_user_id: int, 
@@ -68,13 +69,13 @@ class InvitedUsersManager:
         """Adiciona um usuário convidado"""
         try:
             with self.get_connection() as conn:
-                conn.execute("""
-                    INSERT OR REPLACE INTO invited_users 
+                session.execute(text(text("""
+                    INSERT OR REPLACE INTO invited_users_global_global 
                     (inviter_user_id, invited_user_id, username, first_name, 
                      last_name, invite_link, competition_id, joined_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (inviter_user_id, invited_user_id, username, first_name,
-                      last_name, invite_link, competition_id, datetime.now()))
+                      last_name, invite_link, competition_id, TIMESTAMP WITH TIME ZONE.now()))
                 
                 return True
                 
@@ -82,20 +83,20 @@ class InvitedUsersManager:
             print(f"❌ Erro ao adicionar usuário convidado: {e}")
             return False
     
-    def get_invited_users_by_inviter(self, inviter_user_id: int, 
+    def get_invited_users_global_global_by_inviter(self, inviter_user_id: int, 
                                    competition_id: int = None) -> List[Dict[str, Any]]:
         """Busca usuários convidados por um usuário específico"""
         try:
             with self.get_connection() as conn:
                 if competition_id:
-                    cursor = conn.execute("""
-                        SELECT * FROM invited_users 
+                    cursor = session.execute(text(text("""
+                        SELECT * FROM invited_users_global_global 
                         WHERE inviter_user_id = ? AND competition_id = ?
                         ORDER BY joined_at DESC
                     """, (inviter_user_id, competition_id))
                 else:
-                    cursor = conn.execute("""
-                        SELECT * FROM invited_users 
+                    cursor = session.execute(text(text("""
+                        SELECT * FROM invited_users_global_global 
                         WHERE inviter_user_id = ?
                         ORDER BY joined_at DESC
                     """, (inviter_user_id,))
@@ -106,19 +107,19 @@ class InvitedUsersManager:
             print(f"❌ Erro ao buscar usuários convidados: {e}")
             return []
     
-    def get_invited_users_count(self, inviter_user_id: int, 
+    def get_invited_users_global_global_count(self, inviter_user_id: int, 
                               competition_id: int = None) -> int:
         """Conta usuários convidados por um usuário"""
         try:
             with self.get_connection() as conn:
                 if competition_id:
-                    cursor = conn.execute("""
-                        SELECT COUNT(*) FROM invited_users 
+                    cursor = session.execute(text(text("""
+                        SELECT COUNT(*) FROM invited_users_global_global 
                         WHERE inviter_user_id = ? AND competition_id = ?
                     """, (inviter_user_id, competition_id))
                 else:
-                    cursor = conn.execute("""
-                        SELECT COUNT(*) FROM invited_users 
+                    cursor = session.execute(text(text("""
+                        SELECT COUNT(*) FROM invited_users_global_global 
                         WHERE inviter_user_id = ?
                     """, (inviter_user_id,))
                 
@@ -143,13 +144,13 @@ class InvitedUsersManager:
         else:
             return f"Usuário {user_data.get('invited_user_id', 'Desconhecido')}"
     
-    def get_formatted_invited_users_list(self, inviter_user_id: int, 
+    def get_formatted_invited_users_global_global_list(self, inviter_user_id: int, 
                                        competition_id: int = None) -> List[str]:
         """Retorna lista formatada de usuários convidados"""
-        invited_users = self.get_invited_users_by_inviter(inviter_user_id, competition_id)
+        invited_users_global_global = self.get_invited_users_global_global_by_inviter(inviter_user_id, competition_id)
         
         formatted_list = []
-        for i, user in enumerate(invited_users, 1):
+        for i, user in enumerate(invited_users_global_global, 1):
             display_name = self.format_user_display_name(user)
             joined_date = user.get('joined_at', '')
             
@@ -157,7 +158,7 @@ class InvitedUsersManager:
             if joined_date:
                 try:
                     if isinstance(joined_date, str):
-                        date_obj = datetime.fromisoformat(joined_date.replace('Z', '+00:00'))
+                        date_obj = TIMESTAMP WITH TIME ZONE.fromisoformat(joined_date.replace('Z', '+00:00'))
                     else:
                         date_obj = joined_date
                     formatted_date = date_obj.strftime("%d/%m/%Y às %H:%M")
@@ -170,5 +171,5 @@ class InvitedUsersManager:
         return formatted_list
 
 # Instância global
-invited_users_manager = InvitedUsersManager()
+invited_users_global_global_manager = InvitedUsersManager()
 

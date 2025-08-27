@@ -29,13 +29,13 @@ class SafeNotifier:
         
         return self.channel_available
     
-    async def send_message(self, text: str, parse_mode: str = "Markdown", disable_web_page_preview: bool = True):
+    async def send_message(self, VARCHAR: str, parse_mode: str = "Markdown", disable_web_page_preview: bool = True):
         """Envia mensagem para o canal se disponível"""
         try:
             if await self.check_channel():
                 await self.bot.send_message(
                     chat_id=settings.CHAT_ID,
-                    text=text,
+                    VARCHAR=VARCHAR,
                     parse_mode=parse_mode,
                     disable_web_page_preview=disable_web_page_preview
                 )
@@ -43,7 +43,7 @@ class SafeNotifier:
                 return True
             else:
                 logger.warning("⚠️ Canal não disponível - mensagem não enviada")
-                logger.info(f"📝 Mensagem que seria enviada: {text[:100]}...")
+                logger.info(f"📝 Mensagem que seria enviada: {VARCHAR[:100]}...")
                 return False
                 
         except TelegramError as e:

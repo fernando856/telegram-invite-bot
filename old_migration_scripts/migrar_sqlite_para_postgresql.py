@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 Migração Completa: SQLite → PostgreSQL
-Migra todos os dados do bot_database.db para PostgreSQL
+Migra todos os dados do bot_postgresql://user:pass@localhost/dbname para PostgreSQL
 """
-import sqlite3
+from sqlalchemy import create_engine, text
 import psycopg2
-from datetime import datetime
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
 import os
 from dotenv import load_dotenv
 
@@ -20,7 +20,7 @@ def migrar_dados():
     
     try:
         # Conectar SQLite
-        sqlite_conn = sqlite3.connect('bot_database.db')
+        sqlite_conn = postgresql_connection('bot_postgresql://user:pass@localhost/dbname')
         sqlite_conn.row_factory = sqlite3.Row
         sqlite_cursor = sqlite_conn.cursor()
         
@@ -37,14 +37,14 @@ def migrar_dados():
         
         # 1. MIGRAR USUÁRIOS
         print("\n👤 MIGRANDO USUÁRIOS...")
-        sqlite_cursor.execute("SELECT * FROM users")
-        users = sqlite_cursor.fetchall()
+        sqlite_cursor.execute("SELECT * FROM users_global_global")
+        users_global = sqlite_cursor.fetchall()
         
-        migrated_users = 0
-        for user in users:
+        migrated_users_global = 0
+        for user in users_global:
             try:
                 pg_cursor.execute("""
-                    INSERT INTO users (user_id, username, first_name, last_name, created_at, updated_at)
+                    INSERT INTO users_global_global (user_id, username, first_name, last_name, created_at, updated_at)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     ON CONFLICT (user_id) DO UPDATE SET
                         username = EXCLUDED.username,
@@ -59,22 +59,22 @@ def migrar_dados():
                     user['created_at'],
                     user['updated_at']
                 ))
-                migrated_users += 1
+                migrated_users_global += 1
             except Exception as e:
                 print(f"   ❌ Erro ao migrar user {user['user_id']}: {e}")
         
-        print(f"   ✅ {migrated_users} usuários migrados")
+        print(f"   ✅ {migrated_users_global} usuários migrados")
         
         # 2. MIGRAR COMPETIÇÕES
         print("\n🏆 MIGRANDO COMPETIÇÕES...")
-        sqlite_cursor.execute("SELECT * FROM competitions")
-        competitions = sqlite_cursor.fetchall()
+        sqlite_cursor.execute("SELECT * FROM competitions_global_global")
+        competitions_global = sqlite_cursor.fetchall()
         
         migrated_comps = 0
-        for comp in competitions:
+        for comp in competitions_global:
             try:
                 pg_cursor.execute("""
-                    INSERT INTO competitions (id, name, description, start_date, end_date, target_invites, status, created_at)
+                    INSERT INTO competitions_global_global (id, name, description, start_date, end_date, target_invites, status, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         name = EXCLUDED.name,
@@ -101,14 +101,14 @@ def migrar_dados():
         
         # 3. MIGRAR PARTICIPANTES
         print("\n🎯 MIGRANDO PARTICIPANTES...")
-        sqlite_cursor.execute("SELECT * FROM competition_participants")
+        sqlite_cursor.execute("SELECT * FROM competition_participants_global_global")
         participants = sqlite_cursor.fetchall()
         
         migrated_parts = 0
         for part in participants:
             try:
                 pg_cursor.execute("""
-                    INSERT INTO competition_participants (id, competition_id, user_id, invites_count, position, joined_at, last_invite_at)
+                    INSERT INTO competition_participants_global_global (id, competition_id, user_id, invites_count, position, joined_at, last_invite_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         invites_count = EXCLUDED.invites_count,
@@ -131,14 +131,14 @@ def migrar_dados():
         
         # 4. MIGRAR LINKS DE CONVITE
         print("\n📎 MIGRANDO LINKS DE CONVITE...")
-        sqlite_cursor.execute("SELECT * FROM invite_links")
+        sqlite_cursor.execute("SELECT * FROM invite_links_global_global")
         links = sqlite_cursor.fetchall()
         
         migrated_links = 0
         for link in links:
             try:
                 pg_cursor.execute("""
-                    INSERT INTO invite_links (id, user_id, competition_id, link, uses, max_uses, expire_date, created_at)
+                    INSERT INTO invite_links_global_global (id, user_id, competition_id, link, uses, max_uses, expire_date, created_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         uses = EXCLUDED.uses,
@@ -181,7 +181,7 @@ def verificar_migracao(pg_cursor):
     """Verifica se a migração foi bem-sucedida"""
     print("\n🔍 VERIFICANDO MIGRAÇÃO:")
     
-    tabelas = ['users', 'competitions', 'competition_participants', 'invite_links']
+    tabelas = ['users_global', 'competitions_global', 'competition_participants_global', 'invite_links_global']
     
     for tabela in tabelas:
         pg_cursor.execute(f"SELECT COUNT(*) FROM {tabela}")
@@ -198,7 +198,7 @@ def alterar_configuracao():
             content = f.read()
         
         # Substituir DATABASE_URL
-        old_url = 'DATABASE_URL: str = "sqlite:///bot_database.db"'
+        old_url = 'DATABASE_URL: str = "sqlite:///bot_postgresql://user:pass@localhost/dbname"'
         new_url = 'DATABASE_URL: str = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"'
         
         if old_url in content:

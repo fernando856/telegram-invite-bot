@@ -5,7 +5,7 @@ Script para criar competição de teste e verificar contabilização
 
 import sys
 import os
-from datetime import datetime, timedelta
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
 
 # Adicionar o diretório src ao path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -27,13 +27,13 @@ def criar_competicao_teste():
         meta_convites = 1000
         
         # Calcular datas
-        inicio = datetime.now()
+        inicio = TIMESTAMP WITH TIME ZONE.now()
         fim = inicio + timedelta(days=duracao_dias)
         
         with db.get_connection() as conn:
             # Criar competição
-            cursor = conn.execute("""
-                INSERT INTO competitions (
+            cursor = conn.execute(text("""
+                INSERT INTO competitions_global_global (
                     name, description, target_invites, 
                     start_date, end_date, status, 
                     created_at, updated_at
@@ -77,8 +77,8 @@ def criar_usuario_teste():
         
         with db.get_connection() as conn:
             # Verificar se usuário já existe
-            existing = conn.execute("""
-                SELECT user_id FROM users WHERE user_id = ?
+            existing = conn.execute(text("""
+                SELECT user_id FROM users_global_global WHERE user_id = ?
             """, (user_id,)).fetchone()
             
             if existing:
@@ -86,8 +86,8 @@ def criar_usuario_teste():
                 return user_id
             
             # Criar usuário
-            conn.execute("""
-                INSERT INTO users (
+            conn.execute(text("""
+                INSERT INTO users_global_global (
                     user_id, username, first_name, last_name,
                     total_invites, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -118,8 +118,8 @@ def criar_link_teste(user_id):
         
         with db.get_connection() as conn:
             # Verificar se link já existe
-            existing = conn.execute("""
-                SELECT id FROM invite_links WHERE user_id = ? AND is_active = 1
+            existing = conn.execute(text("""
+                SELECT id FROM invite_links_global_global WHERE user_id = ? AND is_active = 1
             """, (user_id,)).fetchone()
             
             if existing:
@@ -127,15 +127,15 @@ def criar_link_teste(user_id):
                 return invite_link
             
             # Criar link
-            cursor = conn.execute("""
-                INSERT INTO invite_links (
+            cursor = conn.execute(text("""
+                INSERT INTO invite_links_global_global (
                     user_id, invite_link, name, max_uses, 
                     expire_date, uses, is_active,
                     created_at, updated_at
                 ) VALUES (?, ?, ?, ?, ?, 0, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """, (
                 user_id, invite_link, "Link de Teste", 10000,
-                (datetime.now() + timedelta(days=30)).isoformat()
+                (TIMESTAMP WITH TIME ZONE.now() + timedelta(days=30)).isoformat()
             ))
             
             conn.commit()
@@ -162,8 +162,8 @@ def adicionar_participante(competition_id, user_id):
     try:
         with db.get_connection() as conn:
             # Verificar se já é participante
-            existing = conn.execute("""
-                SELECT user_id FROM competition_participants 
+            existing = conn.execute(text("""
+                SELECT user_id FROM competition_participants_global_global 
                 WHERE competition_id = ? AND user_id = ?
             """, (competition_id, user_id)).fetchone()
             
@@ -172,8 +172,8 @@ def adicionar_participante(competition_id, user_id):
                 return True
             
             # Adicionar participante
-            conn.execute("""
-                INSERT INTO competition_participants (
+            conn.execute(text("""
+                INSERT INTO competition_participants_global_global (
                     competition_id, user_id, invites_count,
                     joined_at, last_invite_at
                 ) VALUES (?, ?, 0, CURRENT_TIMESTAMP, NULL)
@@ -202,14 +202,14 @@ def testar_contabilizacao(competition_id, user_id, invite_link):
     try:
         with db.get_connection() as conn:
             # Estado inicial
-            inicial = conn.execute("""
+            inicial = conn.execute(text("""
                 SELECT 
                     il.uses as link_uses,
                     u.total_invites,
                     cp.invites_count as comp_invites
-                FROM invite_links il
-                JOIN users u ON il.user_id = u.user_id
-                LEFT JOIN competition_participants cp ON cp.user_id = u.user_id AND cp.competition_id = ?
+                FROM invite_links_global_global il
+                JOIN users_global_global u ON il.user_id = u.user_id
+                LEFT JOIN competition_participants_global_global cp ON cp.user_id = u.user_id AND cp.competition_id = ?
                 WHERE il.user_id = ? AND il.is_active = 1
             """, (competition_id, user_id)).fetchone()
             
@@ -226,22 +226,22 @@ def testar_contabilizacao(competition_id, user_id, invite_link):
                 print(f"   Membro {i}...")
                 
                 # Atualizar link
-                conn.execute("""
-                    UPDATE invite_links 
+                conn.execute(text("""
+                    UPDATE invite_links_global_global 
                     SET uses = uses + 1, updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = ? AND is_active = 1
                 """, (user_id,))
                 
                 # Atualizar usuário
-                conn.execute("""
-                    UPDATE users 
+                conn.execute(text("""
+                    UPDATE users_global_global 
                     SET total_invites = total_invites + 1, updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = ?
                 """, (user_id,))
                 
                 # Atualizar competição
-                conn.execute("""
-                    UPDATE competition_participants 
+                conn.execute(text("""
+                    UPDATE competition_participants_global_global 
                     SET invites_count = invites_count + 1, last_invite_at = CURRENT_TIMESTAMP
                     WHERE competition_id = ? AND user_id = ?
                 """, (competition_id, user_id))
@@ -249,14 +249,14 @@ def testar_contabilizacao(competition_id, user_id, invite_link):
                 conn.commit()
             
             # Estado final
-            final = conn.execute("""
+            final = conn.execute(text("""
                 SELECT 
                     il.uses as link_uses,
                     u.total_invites,
                     cp.invites_count as comp_invites
-                FROM invite_links il
-                JOIN users u ON il.user_id = u.user_id
-                LEFT JOIN competition_participants cp ON cp.user_id = u.user_id AND cp.competition_id = ?
+                FROM invite_links_global_global il
+                JOIN users_global_global u ON il.user_id = u.user_id
+                LEFT JOIN competition_participants_global_global cp ON cp.user_id = u.user_id AND cp.competition_id = ?
                 WHERE il.user_id = ? AND il.is_active = 1
             """, (competition_id, user_id)).fetchone()
             

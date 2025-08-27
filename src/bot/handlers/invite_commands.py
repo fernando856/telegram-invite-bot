@@ -1,7 +1,8 @@
+from src.database.postgresql_global_unique import postgresql_global_unique
 """
 Handlers de Comandos de Convites - Integrado com Sistema de Competição
 """
-from datetime import datetime, timedelta
+from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE, timedelta
 from telegram import Update
 from telegram.ext import ContextTypes, CommandHandler
 from telegram.error import TelegramError
@@ -72,10 +73,10 @@ class InviteHandlers:
             if active_comp:
                 # Calcular tempo restante - versão simplificada
                 try:
-                    now = datetime.now()
+                    now = TIMESTAMP WITH TIME ZONE.now()
                     if isinstance(active_comp.end_date, str):
-                        # Se end_date é string, converter para datetime
-                        end_date = datetime.fromisoformat(active_comp.end_date.replace('Z', '+00:00'))
+                        # Se end_date é string, converter para TIMESTAMP WITH TIME ZONE
+                        end_date = TIMESTAMP WITH TIME ZONE.fromisoformat(active_comp.end_date.replace('Z', '+00:00'))
                     else:
                         end_date = active_comp.end_date
                     
@@ -204,12 +205,12 @@ Aguarde o próximo desafio! 🚀
             if isinstance(invite_link, dict):
                 link_url = invite_link.get('invite_link')
                 max_uses = invite_link.get('max_uses', 99999)
-                current_uses = invite_link.get('current_uses', 0)
+                uses = invite_link.get('uses', 0)
                 expire_date = invite_link.get('expire_date')
             else:
                 link_url = getattr(invite_link, 'invite_link', None)
                 max_uses = getattr(invite_link, 'max_uses', 99999)
-                current_uses = getattr(invite_link, 'current_uses', 0)
+                uses = getattr(invite_link, 'uses', 0)
                 expire_date = getattr(invite_link, 'expire_date', None)
             
             if not link_url:
@@ -221,9 +222,9 @@ Aguarde o próximo desafio! 🚀
             
             # Calcular tempo restante - versão simplificada
             try:
-                now = datetime.now()
+                now = TIMESTAMP WITH TIME ZONE.now()
                 if isinstance(active_comp.end_date, str):
-                    end_date = datetime.fromisoformat(active_comp.end_date.replace('Z', '+00:00'))
+                    end_date = TIMESTAMP WITH TIME ZONE.fromisoformat(active_comp.end_date.replace('Z', '+00:00'))
                 else:
                     end_date = active_comp.end_date
                 
@@ -247,16 +248,16 @@ Aguarde o próximo desafio! 🚀
             try:
                 if expire_date:
                     if isinstance(expire_date, str):
-                        # Tentar converter string para datetime
+                        # Tentar converter string para TIMESTAMP WITH TIME ZONE
                         try:
-                            from datetime import datetime
+                            from TIMESTAMP WITH TIME ZONE import TIMESTAMP WITH TIME ZONE
                             import pytz
                             
-                            # Parse da string datetime
+                            # Parse da string TIMESTAMP WITH TIME ZONE
                             if 'T' in expire_date:
-                                dt = datetime.fromisoformat(expire_date.replace('Z', '+00:00'))
+                                dt = TIMESTAMP WITH TIME ZONE.fromisoformat(expire_date.replace('Z', '+00:00'))
                             else:
-                                dt = datetime.fromisoformat(expire_date)
+                                dt = TIMESTAMP WITH TIME ZONE.fromisoformat(expire_date)
                             
                             # Converter para fuso horário de Brasília (GMT-3)
                             brasilia_tz = pytz.timezone('America/Sao_Paulo')
@@ -271,7 +272,7 @@ Aguarde o próximo desafio! 🚀
                             # Se falhar, usar string original formatada
                             expire_date_str = expire_date.split('.')[0].replace('-', '/').replace('T', ' às ')
                     else:
-                        # Se é objeto datetime
+                        # Se é objeto TIMESTAMP WITH TIME ZONE
                         try:
                             import pytz
                             brasilia_tz = pytz.timezone('America/Sao_Paulo')
@@ -340,8 +341,8 @@ Boa sorte na competição! 🍀"""
             
             # Buscar links do usuário
             with self.db.get_connection() as conn:
-                links = conn.execute("""
-                    SELECT * FROM invite_links 
+                links = session.execute(text(text("""
+                    SELECT * FROM invite_links_global_global_global 
                     WHERE user_id = ? AND is_active = 1
                     ORDER BY created_at DESC
                 """, (user.id,)).fetchall()
@@ -388,7 +389,7 @@ Boa sorte na competição! 🍀"""
             message += "🔗 **Seus últimos links:**\n"
             for i, link in enumerate(links[:5]):
                 status = "✅ Ativo" if link['uses'] < link['max_uses'] else "🔴 Esgotado"
-                created = datetime.fromisoformat(link['created_at']).strftime('%d/%m/%Y')
+                created = TIMESTAMP WITH TIME ZONE.fromisoformat(link['created_at']).strftime('%d/%m/%Y')
                 message += f"• {link['name'] or 'Link sem nome'} - {link['uses']}/{link['max_uses']} usos ({status}) - {created}\n"
             
             if len(links) > 5:
@@ -470,7 +471,7 @@ Participe da competição e concorra a prêmios!
 • Máximo de usos por link: {settings.MAX_INVITE_USES:,}
 • Validade dos links: {settings.LINK_EXPIRY_DAYS} dias
 • Você pode ver suas estatísticas a qualquer momento
-• O ranking é atualizado em tempo real
+• O ranking é atualizado em tempo DECIMAL
 
 """
             
