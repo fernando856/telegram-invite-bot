@@ -52,11 +52,11 @@ def sync_all_data():
             # Inserir ou atualizar participante
             cursor.execute("""
                 INSERT OR REPLACE INTO competition_participants 
-                (user_id, competition_id, invites_count, points, joined_at)
-                VALUES (?, ?, ?, ?, ?)
-            """, (user_id, comp_id, total_invites, points, first_invite))
+                (user_id, competition_id, invites_count, joined_at)
+                VALUES (?, ?, ?, ?)
+            """, (user_id, comp_id, total_invites, first_invite))
             
-            print(f"  - User {user_id}: {total_invites} convites, {points} pontos")
+            print(f"  - User {user_id}: {total_invites} convites")
         
         # 4. Atualizar total_invites na tabela users
         cursor.execute("""

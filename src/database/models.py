@@ -367,34 +367,35 @@ class DatabaseManager:
     def get_competition_participants(self, competition_id: int) -> List[CompetitionParticipant]:
         """Obtém participantes da competição ordenados por número de convites"""
         try:
-            cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT 
-                    cp.user_id,
-                    cp.competition_id,
-                    cp.invites_count,
-                    cp.points,
-                    cp.joined_at,
-                    u.first_name,
-                    u.username
-                FROM competition_participants cp
-                LEFT JOIN users u ON cp.user_id = u.id
-                WHERE cp.competition_id = ?
-                ORDER BY cp.invites_count DESC, cp.joined_at ASC
-            """, (competition_id,))
-            
-            participants = []
-            for row in cursor.fetchall():
-                participant = CompetitionParticipant(
-                    user_id=row[0],
-                    competition_id=row[1],
-                    invites_count=row[2],
-                    points=row[3],
-                    joined_at=row[4]
-                )
-                participants.append(participant)
-            
-            return participants
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT 
+                        cp.user_id,
+                        cp.competition_id,
+                        cp.invites_count,
+                        cp.invites_count as points,
+                        cp.joined_at,
+                        u.first_name,
+                        u.username
+                    FROM competition_participants cp
+                    LEFT JOIN users u ON cp.user_id = u.user_id
+                    WHERE cp.competition_id = ?
+                    ORDER BY cp.invites_count DESC, cp.joined_at ASC
+                """, (competition_id,))
+                
+                participants = []
+                for row in cursor.fetchall():
+                    participant = CompetitionParticipant(
+                        user_id=row[0],
+                        competition_id=row[1],
+                        invites_count=row[2],
+                        points=row[3],  # points = invites_count
+                        joined_at=row[4]
+                    )
+                    participants.append(participant)
+                
+                return participants
             
         except Exception as e:
             logger.error(f"Erro ao buscar participantes da competição {competition_id}: {e}")
