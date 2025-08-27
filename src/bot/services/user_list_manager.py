@@ -243,7 +243,10 @@ class UserListManager:
             has_real_data = invited_data['has_real_data']
             
             if total_count == 0:
-                return message + "📭 **Nenhum usuário entrou pelos seus links ainda.**\n\n🚀 Compartilhe seus links para começar a ver resultados!"
+                return message + "📭 **Nenhum usuário entrou pelos seus links ainda.**\n\n" \
+                               + "🔍 **Transparência total:** Quando alguém entrar pelo seu link, " \
+                               + "você verá o @ (username) da pessoa aqui!\n\n" \
+                               + "🚀 **Compartilhe seus links para começar a ver resultados!**"
             
             message += f"📊 **Total de convites:** {total_count}\n\n"
             message += "👤 **Lista de usuários:**\n"
@@ -258,9 +261,10 @@ class UserListManager:
             
             # Adicionar nota sobre fonte dos dados
             if has_real_data:
-                message += "\n✅ **Dados reais** dos usuários que entraram pelos seus links"
+                message += "\n🔍 **Transparência total:** Dados reais com @ (usernames) dos usuários que entraram"
             else:
-                message += "\n⚡ **Dados baseados** em estatísticas de uso dos links"
+                message += "\n⚡ **Dados simulados** baseados no número de usos dos seus links"
+                message += "\n🔍 **Em breve:** Sistema será atualizado para mostrar @ (usernames) reais"
             
             message += "\n\n🚀 **Continue compartilhando seus links para crescer sua lista!**"
             
@@ -359,10 +363,21 @@ class UserListManager:
                 result = cursor.fetchone()
                 total_uses = result['total_uses'] if result and result['total_uses'] else 0
                 
-                # Gerar lista estimada
+                # Gerar lista estimada com nomes mais realistas
                 users_list = []
+                sample_usernames = [
+                    "@usuario_convidado", "@novo_membro", "@participante", 
+                    "@convidado_especial", "@membro_ativo", "@usuario_premium",
+                    "@novo_participante", "@membro_vip", "@convidado_gold"
+                ]
+                
                 for i in range(1, total_uses + 1):
-                    users_list.append(f"{i}. Usuário Convidado #{i} ⚡")
+                    # Alternar entre username simulado e nome genérico
+                    if i <= len(sample_usernames):
+                        username = f"{sample_usernames[i-1]}{i}"
+                        users_list.append(f"{i}. {username} ⚡")
+                    else:
+                        users_list.append(f"{i}. @usuario_{i} ⚡")
                 
                 return {
                     'total_count': total_uses,
