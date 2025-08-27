@@ -371,11 +371,13 @@ class DatabaseManager:
                 cursor = conn.cursor()
                 cursor.execute("""
                     SELECT 
-                        cp.user_id,
+                        cp.id,
                         cp.competition_id,
+                        cp.user_id,
                         cp.invites_count,
-                        cp.invites_count as points,
+                        cp.position,
                         cp.joined_at,
+                        cp.last_invite_at,
                         u.first_name,
                         u.username
                     FROM competition_participants cp
@@ -387,11 +389,13 @@ class DatabaseManager:
                 participants = []
                 for row in cursor.fetchall():
                     participant = CompetitionParticipant(
-                        user_id=row[0],
+                        id=row[0],
                         competition_id=row[1],
-                        invites_count=row[2],
-                        points=row[3],  # points = invites_count
-                        joined_at=row[4]
+                        user_id=row[2],
+                        invites_count=row[3],
+                        position=row[4],
+                        joined_at=row[5],
+                        last_invite_at=row[6]
                     )
                     participants.append(participant)
                 
